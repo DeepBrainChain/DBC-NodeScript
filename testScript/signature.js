@@ -25,12 +25,12 @@ const CreateSignature = async (password) => {
 }
 
 
-// const Verify = async (msg, sign, wallet='5HL92dTnQrZSJZy7ckDVYVt9mMX3NsjShWsYDquB3eB3yb5R', ver = 'Verify1') => {
-//   await cryptoWaitReady();
-//   console.log(signatureVerify( msg, sign, wallet ), ver );
-// }
+const Verify = async (msg, sign, wallet='5CkWErxCtUPWmQhmX3SXs5UckE7FNpzagHVESH4kiLbStoVK', ver = 'Verify1') => {
+  await cryptoWaitReady();
+  console.log(signatureVerify( msg, sign, wallet ), ver );
+}
 CreateSignature(args['password'])
-
+// Verify('LsGI0SNjk3LqL7kRsIzX0lsc5o55qezfPC1x4d1Ck7kpSuh8P1fvWyr', '0x1e60d81200fe53ba038c71e8f3d57c715ee529497cb9851567df19e2b599f257a47ea6b19d850da91f82ee35f9958460b0aa48024086f491243a9507ab189e84')
 
 function randomWord() {
   let str = "",

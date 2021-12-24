@@ -3,22 +3,21 @@ import mongodb from 'mongodb'
 
 // 链接数据库
 const MongoClient = mongodb.MongoClient;
-const url = "mongodb://dbc:dbcDBC2017xY@localhost:27017/identifier";
-// const url = "mongodb://localhost:27017/test";
+// const url = "mongodb://dbc:dbcDBC2017xY@localhost:27017/identifier";
+const url = "mongodb://localhost:27017/identifier";
 
 
 // 定义路由
 export const Select = express.Router()
 
-// 创建访问接口
+// 用户审核机器获取收益
 Select.get('/searchMachine', async (request, response ,next) => {
   try {
     let wallet = request.query.wallet
     let pageSize = request.query.pageSize?parseInt(request.query.pageSize):1
     let pageNum = request.query.pageNum?parseInt(request.query.pageNum):20
     let perams= [(pageSize-1)*pageNum, pageNum]
-    let conn = await MongoClient.connect(url)
-    // console.log("接口 ----> 数据库已连接");
+    let conn = await MongoClient.connect(url, { useUnifiedTopology: true })
     if(wallet){
       const test = conn.db("identifier").collection("auditRewardTest")
       let reward = await test.aggregate([{ $group : {_id : '$wallet', todayReward : { $sum : "$todayReward" },totalReward : { $sum : "$totalReward" }}}]).toArray()

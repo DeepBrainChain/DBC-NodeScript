@@ -2,9 +2,10 @@
 
 //导入express模块
 import express from 'express'
-
 // 导入路由模块
-import { Select } from '../HttpRequest/api.js'
+import { Select } from '../HttpRequest/auditRewardApi.js'
+import { getAuditList } from '../HttpRequest/auditListApi.js'
+import { rentVirtual } from '../HttpRequest/RentVirtualApi.js'
 // 定义serve
 const serve = express()
 // 设置serve请求头参数
@@ -30,7 +31,8 @@ serve.listen(8090, ()=>{
 
 // 使用 router
 serve.use('/api/select', Select)
-
+serve.use('/api/audit', getAuditList)
+serve.use('/api/rentMachine', rentVirtual)
 //404判断
 serve.use(function (req, res) {
   res.send('404 not found');
