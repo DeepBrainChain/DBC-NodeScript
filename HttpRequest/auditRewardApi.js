@@ -1,11 +1,9 @@
 import express from 'express'
 import mongodb from 'mongodb'
-
+import { mongoUrl } from '../publicResource.js'
 // 链接数据库
 const MongoClient = mongodb.MongoClient;
-// const url = "mongodb://dbc:dbcDBC2017xY@localhost:27017/identifier";
-const url = "mongodb://localhost:27017/identifier";
-
+const url = mongoUrl;
 
 // 定义路由
 export const Select = express.Router()

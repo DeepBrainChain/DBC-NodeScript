@@ -2,7 +2,7 @@ import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import { BN_TEN } from '@polkadot/util';
 import BN from 'bn.js'
-import { typeJson, wssChain } from '../dbc_types.js'
+import { typeJson, wssChain, mongoUrl } from '../publicResource.js'
 
 let api  = null
 // 链上交互

@@ -5,7 +5,7 @@ import BN from 'bn.js'
 import mongodb from 'mongodb'
 import schedule from 'node-schedule'
 import minimist from 'minimist'
-import { typeJson, wssChain } from '../dbc_types.js'
+import { typeJson, wssChain, mongoUrl } from '../publicResource.js'
 
 const MongoClient = mongodb.MongoClient;
 const url = "mongodb://localhost:27017";

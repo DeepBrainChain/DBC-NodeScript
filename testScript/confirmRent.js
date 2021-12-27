@@ -2,8 +2,7 @@ import { ApiPromise, WsProvider } from '@polkadot/api';
 import { Keyring } from "@polkadot/keyring";
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import minimist from "minimist";
-import { typeJson, wssChain } from '../dbc_types.js'
-
+import { typeJson, wssChain } from '../publicResource.js'
 
 let api  = null
 // 链上交互

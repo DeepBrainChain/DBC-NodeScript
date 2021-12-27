@@ -1,10 +1,10 @@
 import express from 'express'
 import mongodb from 'mongodb'
 import bodyParser from 'body-parser'
+import { mongoUrl } from '../publicResource.js'
 // 链接数据库
 const MongoClient = mongodb.MongoClient;
-// const url = "mongodb://dbc:dbcDBC2017xY@localhost:27017/identifier";
-const url = "mongodb://localhost:27017/identifier";
+const url = mongoUrl;
 
 const urlEcode = bodyParser.json()
 // 定义路由

@@ -1,7 +1,7 @@
 import express from 'express'
 import mongodb from 'mongodb'
 import bodyParser from 'body-parser'
-import { typeJson, wssChain } from '../dbc_types.js'
+import { typeJson, wssChain, mongoUrl } from '../publicResource.js'
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import { cryptoWaitReady, randomAsU8a, signatureVerify } from '@polkadot/util-crypto';
 import { BN_TEN, u8aToHex } from '@polkadot/util';
@@ -9,8 +9,7 @@ import httpRequest from 'request-promise';
 import BN from 'bn.js'
 // 链接数据库
 const MongoClient = mongodb.MongoClient;
-// const url = "mongodb://dbc:dbcDBC2017xY@localhost:27017/identifier";
-const url = "mongodb://localhost:27017/identifier";
+const url = mongoUrl;
 const urlEcode = bodyParser.json()
 // 定义路由
 export const rentVirtual = express.Router()
@@ -492,7 +491,7 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
           let VirInfo = {}
           try {
             VirInfo = await httpRequest({
-              url: "http://183.60.141.57:5052/api/v1/tasks/start",
+              url: "http://121.57.95.175:5179/api/v1/tasks/start",
               method: "post",
               json: true,
               headers: {},
@@ -500,7 +499,7 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
                 "peer_nodes_list": [machine_id], 
                 "additional": {
                   "ssh_port": String(ssh_port),
-                  "image_name": "basewin21h1.qcow2",
+                  "image_name": "ubuntu.qcow2",
                   "gpu_count": String(gpu_count),
                   "cpu_cores": String(cpu_cores),
                   "mem_size": String(mem_rate),
@@ -589,7 +588,7 @@ rentVirtual.post('/getVirTask', urlEcode, async (request, response ,next) => {
             try {
               let { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
               taskinfo = await httpRequest({
-                url: "http://183.60.141.57:5052/api/v1/tasks/start/"+taskArr[k].task_id,
+                url: "http://121.57.95.175:5179/api/v1/tasks/"+taskArr[k].task_id,
                 method: "post",
                 json: true,
                 headers: {},
@@ -604,9 +603,8 @@ rentVirtual.post('/getVirTask', urlEcode, async (request, response ,next) => {
             } catch (err) {
               taskinfo = err.error
             }
-            console.log(taskinfo, 'taskinfo')
             if (taskinfo.errcode == 0) {
-              await task.updateOne({_id: taskArr[k].task_id,$set: taskinfo.message })
+              await task.updateOne({ _id: taskArr[k].task_id }, { $set: taskinfo.message })
             }
           }
           let belongMachine = await task.find({ belong: id }).toArray()
@@ -627,6 +625,64 @@ rentVirtual.post('/getVirTask', urlEcode, async (request, response ,next) => {
         response.json({
           code: -2,
           msg:'签名验证失败',
+          success: false
+        })
+      }
+    }else{
+      response.json({
+        code: -1,
+        msg:'参数不能为空',
+        success: false
+      })
+    }
+  } catch (error) {
+    response.json({
+      code: -10001,
+      msg:error.message,
+      success: false
+    })
+  }
+})
+
+// 重启虚拟机
+rentVirtual.post('/restartVir', urlEcode, async (request, response ,next) => {
+  try {
+    const { id, task_id, machine_id } = request.body
+    if(id&&task_id) {
+      let conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      const getwallet = conn.db("identifier").collection("temporaryWallet")
+      let walletArr = await getwallet.find({_id: id}).toArray()
+      let walletinfo = walletArr[0]
+      let taskinfo = {}
+      try {
+        let { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
+        taskinfo = await httpRequest({
+          url: "http://121.57.95.175:5179/api/v1/tasks/restart/"+task_id,
+          method: "post",
+          json: true,
+          headers: {},
+          body: {
+            "peer_nodes_list": [machine_id], 
+            "additional": {},
+            "nonce": nonce1,
+            "sign": sign1,
+            "wallet": walletinfo.wallet
+          }
+        })
+      } catch (err) {
+        taskinfo = err.error
+      }
+      console.log(taskinfo, 'restartVir')
+      if (taskinfo.errcode == 0) {
+        response.json({
+          code: 10001,
+          msg: '重启成功',
+          success: true
+        })
+      }else {
+        response.json({
+          code: -2,
+          msg: taskinfo.message,
           success: false
         })
       }

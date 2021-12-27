@@ -2,11 +2,10 @@ import { ApiPromise, WsProvider } from '@polkadot/api';
 import mongodb from 'mongodb'
 import schedule from 'node-schedule'
 import request from 'request-promise';
-import { typeJson, wssChain } from '../dbc_types.js'
+import { typeJson, wssChain, mongoUrl } from '../publicResource.js'
 
 const MongoClient = mongodb.MongoClient;
-// const url = "mongodb://dbc:dbcDBC2017xY@localhost:27017/identifier";
-const url = "mongodb://localhost:27017/identifier";
+const url = mongoUrl;
 let api  = null
 let conn = null
 // 链上交互
@@ -156,13 +155,8 @@ const getMachine = async () => {
       let info = await committeeMachine(committee[i]);
       conn = await MongoClient.connect(url, { useUnifiedTopology: true })
       const test = conn.db("identifier").collection("auditListTest")
-      for (let k = 0; k < info.length; k++) {
-        const hasId = await test.find({_id: info[k]._id}).toArray()
-        if (hasId.length) {
-          await test.deleteOne({_id: info[k]._id})
-        }
-      }
-      (info?info.length:0) && test.insertMany(info)
+      await test.deleteMany({ wallet: committee[i] })
+      info && await test.insertMany(info)
     }
   } catch (err) {
     console.log(err, 'getMachine')

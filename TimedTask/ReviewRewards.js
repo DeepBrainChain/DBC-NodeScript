@@ -1,11 +1,10 @@
 import { ApiPromise, WsProvider } from '@polkadot/api';
 import mongodb from 'mongodb'
 import schedule from 'node-schedule'
-import { typeJson, wssChain } from '../dbc_types.js'
+import { typeJson, wssChain, mongoUrl } from '../publicResource.js'
 
 const MongoClient = mongodb.MongoClient;
-// const url = "mongodb://dbc:dbcDBC2017xY@localhost:27017/identifier";
-const url = "mongodb://localhost:27017/identifier";
+const url = mongoUrl;
 let api  = null
 // 链上交互
 export const GetApi = async () =>{
