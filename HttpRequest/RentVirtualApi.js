@@ -212,15 +212,17 @@ rentVirtual.post('/createVirOrder', urlEcode, async (request, response ,next) =>
       } else {
         response.json({
           code: -2,
-          msg:'获取机器信息失败',
-          success: false
+          msg: '获取机器信息失败',
+          success: false,
+          content: machine_id
         })
       }
     }else{
       response.json({
         code: -1,
-        msg:'获取参数信息失败',
-        success: false
+        msg: '获取参数信息失败',
+        success: false,
+        content: machine_id
       })
     }
   } catch (error) {
@@ -491,7 +493,7 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
           let VirInfo = {}
           try {
             VirInfo = await httpRequest({
-              url: "http://121.57.95.175:5179/api/v1/tasks/start",
+              url: "http://183.60.141.57:5052/api/v1/tasks/start",
               method: "post",
               json: true,
               headers: {},
@@ -588,7 +590,7 @@ rentVirtual.post('/getVirTask', urlEcode, async (request, response ,next) => {
             try {
               let { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
               taskinfo = await httpRequest({
-                url: "http://121.57.95.175:5179/api/v1/tasks/"+taskArr[k].task_id,
+                url: "http://183.60.141.57:5052/api/v1/tasks/"+taskArr[k].task_id,
                 method: "post",
                 json: true,
                 headers: {},
@@ -657,7 +659,7 @@ rentVirtual.post('/restartVir', urlEcode, async (request, response ,next) => {
       try {
         let { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
         taskinfo = await httpRequest({
-          url: "http://121.57.95.175:5179/api/v1/tasks/restart/"+task_id,
+          url: "http://183.60.141.57:5052/api/v1/tasks/restart/"+task_id,
           method: "post",
           json: true,
           headers: {},

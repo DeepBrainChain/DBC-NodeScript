@@ -339,6 +339,6 @@ export const wssChain = {
   dbc: 'wss://congtuinfo.dbcwallet.io:7777'
 }
 
-export const mongoUrl = 'mongodb://localhost:27017/identifier'
+// export const mongoUrl = 'mongodb://localhost:27017/identifier'
 
-// export const mongoUrl = 'mongodb://dbc:dbcDBC2017xY@localhost:27017/identifier'
+export const mongoUrl = 'mongodb://dbc:dbcDBC2017xY@localhost:27017/identifier'
