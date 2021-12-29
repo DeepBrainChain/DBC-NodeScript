@@ -2,7 +2,7 @@ import { ApiPromise, WsProvider } from '@polkadot/api';
 import mongodb from 'mongodb'
 import schedule from 'node-schedule'
 import request from 'request-promise';
-import { typeJson, wssChain, mongoUrl } from '../publicResource.js'
+import { typeJson, wssChain, mongoUrl, baseUrl } from '../publicResource.js'
 
 const MongoClient = mongodb.MongoClient;
 const url = mongoUrl;
@@ -69,7 +69,7 @@ let committeeMachineListInfo = []
       let machineInfo = {}
       try {
         machineInfo = await request({
-          url: "http://183.60.141.57:5052/api/v1/mining_nodes",
+          url: baseUrl + "/api/v1/mining_nodes",
           method: "post",
           json: true,
           headers: {},
@@ -95,7 +95,7 @@ let committeeMachineListInfo = []
       let machineInfo = {}
       try {
         machineInfo = await request({
-          url: "http://183.60.141.57:5052/api/v1/mining_nodes",
+          url: baseUrl + "/api/v1/mining_nodes",
           method: "post",
           json: true,
           headers: {},
@@ -121,7 +121,7 @@ let committeeMachineListInfo = []
       let machineInfo = {}
       try {
         machineInfo = await request({
-          url: "http://183.60.141.57:5052/api/v1/mining_nodes",
+          url: baseUrl + "/api/v1/mining_nodes",
           method: "post",
           json: true,
           headers: {},

@@ -335,10 +335,24 @@ export const typeJson = {
   }
 }
 
+/**
+ * wssChain 调用链名称
+ */
 export const wssChain = {
-  dbc: 'wss://congtuinfo.dbcwallet.io:7777'
+  dbc: 'wss://congtuinfo.dbcwallet.io:7777', // 聪图云私链测试链
+  // dbc: 'wss://infotest.dbcwallet.io', // 公链测试链
+  // dbc: 'wss://info.dbcwallet.io' // 公链正式链
 }
 
-// export const mongoUrl = 'mongodb://localhost:27017/identifier'
+/**
+ * baseUrl c++ 端口
+ */
+export const baseUrl = 'http://183.60.141.57:5052' // 聪图云私链端口
+// const baseUrl = 'http://121.57.95.175:5179' // 主网测试端口
+// const baseUrl = 'http://183.60.141.57:5012' // 主网端口
 
-export const mongoUrl = 'mongodb://dbc:dbcDBC2017xY@localhost:27017/identifier'
+/**
+ * 连接mongo数据库
+ */
+// export const mongoUrl = 'mongodb://localhost:27017/identifier' // 本地访问mongo
+export const mongoUrl = 'mongodb://dbc:dbcDBC2017xY@localhost:27017/identifier' // 服务器访问mongo

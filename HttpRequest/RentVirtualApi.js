@@ -1,7 +1,7 @@
 import express from 'express'
 import mongodb from 'mongodb'
 import bodyParser from 'body-parser'
-import { typeJson, wssChain, mongoUrl } from '../publicResource.js'
+import { typeJson, wssChain, mongoUrl, baseUrl } from '../publicResource.js'
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import { cryptoWaitReady, randomAsU8a, signatureVerify } from '@polkadot/util-crypto';
 import { BN_TEN, u8aToHex } from '@polkadot/util';
@@ -493,7 +493,7 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
           let VirInfo = {}
           try {
             VirInfo = await httpRequest({
-              url: "http://183.60.141.57:5052/api/v1/tasks/start",
+              url: baseUrl + "/api/v1/tasks/start",
               method: "post",
               json: true,
               headers: {},
@@ -590,7 +590,7 @@ rentVirtual.post('/getVirTask', urlEcode, async (request, response ,next) => {
             try {
               let { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
               taskinfo = await httpRequest({
-                url: "http://183.60.141.57:5052/api/v1/tasks/"+taskArr[k].task_id,
+                url: baseUrl + "/api/v1/tasks/"+taskArr[k].task_id,
                 method: "post",
                 json: true,
                 headers: {},
@@ -659,7 +659,7 @@ rentVirtual.post('/restartVir', urlEcode, async (request, response ,next) => {
       try {
         let { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
         taskinfo = await httpRequest({
-          url: "http://183.60.141.57:5052/api/v1/tasks/restart/"+task_id,
+          url: baseUrl + "/api/v1/tasks/restart/"+task_id,
           method: "post",
           json: true,
           headers: {},
