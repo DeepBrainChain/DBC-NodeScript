@@ -339,17 +339,17 @@ export const typeJson = {
  * wssChain 调用链名称
  */
 export const wssChain = {
-  dbc: 'wss://congtuinfo.dbcwallet.io:7777', // 聪图云私链测试链
-  // dbc: 'wss://infotest.dbcwallet.io', // 公链测试链
+  // dbc: 'wss://congtuinfo.dbcwallet.io:7777', // 聪图云私链测试链
+  dbc: 'wss://infotest.dbcwallet.io:7777', // 公链测试链
   // dbc: 'wss://info.dbcwallet.io' // 公链正式链
 }
 
 /**
  * baseUrl c++ 端口
  */
-export const baseUrl = 'http://183.60.141.57:5052' // 聪图云私链端口
-// const baseUrl = 'http://121.57.95.175:5179' // 主网测试端口
-// const baseUrl = 'http://183.60.141.57:5012' // 主网端口
+// export const baseUrl = 'http://115.231.234.37:5052' // 聪图云私链端口
+export const baseUrl = 'http://115.231.234.32:5052' // 主网测试端口
+// export const baseUrl = 'http://115.231.234.34:5052' // 主网端口
 
 /**
  * 连接mongo数据库

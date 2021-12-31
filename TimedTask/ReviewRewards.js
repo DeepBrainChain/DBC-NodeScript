@@ -82,12 +82,10 @@ export const erasMachineReleasedReward = async ( EraIndex, MachineId) => {
 // 定义机器信息，避免重复获取，节省时间
 let Total_machinesList = []
 let updataMachine = []
-
+var conn = null;
 export const getList = async (wallet, nowDay) => {
-  var conn = null;
   try {
     conn = await MongoClient.connect(url, { useUnifiedTopology: true });
-    console.log("数据 ----> 数据库已连接");
     const test = conn.db("identifier").collection("auditRewardTest");
     let allListedMachine = []
     let j = 0 
@@ -156,14 +154,25 @@ export const getList = async (wallet, nowDay) => {
   }
 }
 
+const firstRun = async () => {
+  try {
+    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+    console.log(" firstRun ----> 数据库已连接");
+    const test = conn.db("identifier").collection("auditRewardTest");
+    await test.deleteMany({})
+  } catch (err) {
+    console.log("firstRun错误：" + err);
+  }
+}
+
 const getMachine = async () => {
   let nowDay = await currentEra() 
   let committee = await committeeStake()
-  console.log(committee, 'commitList');
   for(let i = 0; i < committee.length; i++){
     await getList(committee[i] , nowDay);
   }
 }
+firstRun();
 getMachine();
 
 export const scheduleCronstyle = () => {

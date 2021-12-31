@@ -38,7 +38,6 @@ export const inputToBn = (input, siPower, basePower) => {
     result = div
       .mul(BN_TEN.pow(siPower))
       .add(mod.mul(BN_TEN.pow(new BN(basePower - modString.length))));
-    // console.log('[modString]->', modString)
   } else {
     result = new BN(input.replace(/[^\d]/g, ''))
       .mul(BN_TEN.pow(siPower));
@@ -169,7 +168,7 @@ rentVirtual.post('/getWallet', urlEcode, async (request, response ,next) => {
   }
 })
 
-// 生成虚拟机订单 订单状态： 0：待支付 1：已支付，待租用 2：待确认租用 3：正在使用中 4：订单结束 5：订单取消 errRefund：退币异常
+// 生成虚拟机订单 订单状态： 0：待支付 1：已支付，待租用 2：待确认租用 3：正在使用中 4：订单结束 5：订单取消 6.正在退币中，请稍后(只针对订单取消状态之前) errRefund：退币异常
 rentVirtual.post('/createVirOrder', urlEcode, async (request, response ,next) => {
   try {
     const {id, machine_id, dollar, day, count, dbc, wallet } = request.body
@@ -234,7 +233,7 @@ rentVirtual.post('/createVirOrder', urlEcode, async (request, response ,next) =>
   }
 })
 
-// 支付完成，修改状态，租用机器 订单状态： 0：待支付 1：已支付，待租用 2：待确认租用 3：正在使用中 4：订单结束 5：订单取消 errRefund：退币异常
+// 支付完成，修改状态，租用机器 订单状态： 0：待支付 1：已支付，待租用 2：待确认租用 3：正在使用中 4：订单结束 5：订单取消 6.正在退币中，请稍后(只针对订单取消状态之前) errRefund：退币异常
 rentVirtual.post('/rentmachine', urlEcode, async (request, response ,next) => {
   try {
     const { id } = request.body
@@ -314,14 +313,14 @@ rentVirtual.post('/rentmachine', urlEcode, async (request, response ,next) => {
   }
 })
 
-// 查询虚拟机订单
+// 查询虚拟机订单 订单状态： 0：待支付 1：已支付，待租用 2：待确认租用 3：正在使用中 4：订单结束 5：订单取消 6.正在退币中，请稍后(只针对订单取消状态之前) errRefund：退币异常
 rentVirtual.post('/getVirtual', urlEcode, async (request, response ,next) => {
   try {
     const { wallet } = request.body
     let conn = await MongoClient.connect(url, { useUnifiedTopology: true })
     if(wallet) {
       const search = conn.db("identifier").collection("VirtualInfo")
-      let orderArr = await search.find({wallet: wallet, orderStatus: {$in:[2, 3, 4, 5]}}).toArray()
+      let orderArr = await search.find({wallet: wallet, orderStatus: {$in:[2, 3, 4, 5, 6]}}).toArray()
       response.json({
         success: true,
         code: 10001,
@@ -537,7 +536,6 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
               success: false
             })
           }
-          console.log(VirInfo, 'VirInfo')
         } else {
           response.json({
             code: -3,
@@ -674,7 +672,6 @@ rentVirtual.post('/restartVir', urlEcode, async (request, response ,next) => {
       } catch (err) {
         taskinfo = err.error
       }
-      console.log(taskinfo, 'restartVir')
       if (taskinfo.errcode == 0) {
         response.json({
           code: 10001,
