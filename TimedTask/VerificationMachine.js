@@ -76,7 +76,9 @@ let committeeMachineListInfo = []
           body: {"peer_nodes_list": [list.booked_machine[i]], "additional": {}}
         })
       } catch (err) {
-        machineInfo = err.error
+        machineInfo = {
+          message: err.message
+        }
       }
       infoMachine.push({
         _id: wallet+list.booked_machine[i],
@@ -102,7 +104,9 @@ let committeeMachineListInfo = []
           body: {"peer_nodes_list": [list.hashed_machine[i]], "additional": {}}
         })
       } catch (err) {
-        machineInfo = err.error
+        machineInfo = {
+          message: err.message
+        }
       }
       infoMachine.push({
         _id: wallet+list.hashed_machine[i],
@@ -128,7 +132,9 @@ let committeeMachineListInfo = []
           body: {"peer_nodes_list": [list.confirmed_machine[i]], "additional": {}}
         })
       } catch (err) {
-        machineInfo = err.error
+        machineInfo = {
+          message: err.message
+        }
       }
       infoMachine.push({
         _id: wallet+list.confirmed_machine[i],
@@ -166,7 +172,13 @@ const getMachine = async () => {
 getMachine();
 
 export const scheduleCronstyle = () => {
+  schedule.scheduleJob('00 50 * * * *',function(){
+    getMachine();
+  });
   schedule.scheduleJob('00 30 * * * *',function(){
+    getMachine();
+  });
+  schedule.scheduleJob('00 10 * * * *',function(){
     getMachine();
   });
 }

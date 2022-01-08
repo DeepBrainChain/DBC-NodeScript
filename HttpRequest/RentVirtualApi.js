@@ -482,9 +482,9 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
       if (hasNonce) {
         let conn = await MongoClient.connect(url, { useUnifiedTopology: true })
         const searchNonce = conn.db("identifier").collection("nonceList")
-        let NonceInfo = await searchNonce.find({wallet: wallet, nonce: nonce}).toArray()
+        let NonceInfo = await searchNonce.find({wallet: wallet, nonce: nonce, belong: 'rentvirtual'}).toArray()
         if (!NonceInfo.length) {
-          await searchNonce.insertOne({ nonce: nonce, wallet: wallet })
+          await searchNonce.insertOne({ nonce: nonce, wallet: wallet, belong: 'rentvirtual' })
           const getwallet = conn.db("identifier").collection("temporaryWallet")
           let walletArr = await getwallet.find({_id: id}).toArray()
           let walletinfo = walletArr[0]
@@ -515,9 +515,11 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
               }
             })
           } catch (err) {
-            VirInfo = err.error
+            VirInfo = {
+              message: err.message
+            }
           }
-          if (VirInfo.errcode == 0) {
+          if (VirInfo&&VirInfo.errcode == 0) {
             const task = conn.db("identifier").collection("virtualTask")
             await task.insertOne({
               _id: VirInfo.message.task_id,
@@ -575,9 +577,9 @@ rentVirtual.post('/getVirTask', urlEcode, async (request, response ,next) => {
       if (hasNonce) {
         let conn = await MongoClient.connect(url, { useUnifiedTopology: true })
         const searchNonce = conn.db("identifier").collection("nonceList")
-        let NonceInfo = await searchNonce.find({wallet: wallet, nonce: nonce}).toArray()
+        let NonceInfo = await searchNonce.find({wallet: wallet, nonce: nonce, belong: 'rentvirtual' }).toArray()
         if (!NonceInfo.length) {
-          await searchNonce.insertOne({ nonce: nonce, wallet: wallet })
+          await searchNonce.insertOne({ nonce: nonce, wallet: wallet, belong: 'rentvirtual' })
           const task = conn.db("identifier").collection("virtualTask")
           const getwallet = conn.db("identifier").collection("temporaryWallet")
           let taskArr = await task.find({ belong: id }).toArray()
@@ -601,9 +603,11 @@ rentVirtual.post('/getVirTask', urlEcode, async (request, response ,next) => {
                 }
               })
             } catch (err) {
-              taskinfo = err.error
+              taskinfo = {
+                message: err.message
+              }
             }
-            if (taskinfo.errcode == 0) {
+            if (taskinfo&&taskinfo.errcode == 0) {
               await task.updateOne({ _id: taskArr[k].task_id }, { $set: taskinfo.message })
             }
           }
@@ -670,9 +674,11 @@ rentVirtual.post('/restartVir', urlEcode, async (request, response ,next) => {
           }
         })
       } catch (err) {
-        taskinfo = err.error
+        taskinfo = {
+          message: err.message
+        }
       }
-      if (taskinfo.errcode == 0) {
+      if (taskinfo&&taskinfo.errcode == 0) {
         response.json({
           code: 10001,
           msg: '重启成功',
