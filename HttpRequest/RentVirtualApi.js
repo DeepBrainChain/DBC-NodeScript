@@ -125,9 +125,10 @@ export const transfer = async ( value, seed, toWallet) => {
 }
 // 生成临时钱包四位随机数
 rentVirtual.post('/getWallet', urlEcode, async (request, response ,next) => {
+  let conn = null;
   try {
     let id = request.body.id
-    let conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
     if(id){
       const test = conn.db("identifier").collection("temporaryWallet")
       let arr = await test.find({_id: id}).toArray()
@@ -165,14 +166,17 @@ rentVirtual.post('/getWallet', urlEcode, async (request, response ,next) => {
       msg:error.message,
       success: false
     })
+  } finally {
+    if (conn != null) conn.close()
   }
 })
 
 // 生成虚拟机订单 订单状态： 0：待支付 1：已支付，待租用 2：待确认租用 3：正在使用中 4：订单结束 5：订单取消 6.正在退币中，请稍后(只针对订单取消状态之前) errRefund：退币异常
 rentVirtual.post('/createVirOrder', urlEcode, async (request, response ,next) => {
+  let conn = null;
   try {
     const {id, machine_id, dollar, day, count, dbc, wallet } = request.body
-    let conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
     if(id&&machine_id&&dollar&&day&&count&&dbc&&wallet) {
       const test = conn.db("identifier").collection("MachineDetailsInfo")
       const search = conn.db("identifier").collection("VirtualInfo")
@@ -230,14 +234,17 @@ rentVirtual.post('/createVirOrder', urlEcode, async (request, response ,next) =>
       msg:error.message,
       success: false
     })
+  } finally {
+    if (conn != null) conn.close()
   }
 })
 
 // 支付完成，修改状态，租用机器 订单状态： 0：待支付 1：已支付，待租用 2：待确认租用 3：正在使用中 4：订单结束 5：订单取消 6.正在退币中，请稍后(只针对订单取消状态之前) errRefund：退币异常
 rentVirtual.post('/rentmachine', urlEcode, async (request, response ,next) => {
+  let conn = null;
   try {
     const { id } = request.body
-    let conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
     if(id) {
       const search = conn.db("identifier").collection("VirtualInfo")
       const wallet = conn.db("identifier").collection("temporaryWallet")
@@ -310,14 +317,17 @@ rentVirtual.post('/rentmachine', urlEcode, async (request, response ,next) => {
       msg:error.message,
       success: false
     })
+  } finally {
+    if (conn != null) conn.close()
   }
 })
 
 // 查询虚拟机订单 订单状态： 0：待支付 1：已支付，待租用 2：待确认租用 3：正在使用中 4：订单结束 5：订单取消 6.正在退币中，请稍后(只针对订单取消状态之前) errRefund：退币异常
 rentVirtual.post('/getVirtual', urlEcode, async (request, response ,next) => {
+  let conn = null;
   try {
     const { wallet } = request.body
-    let conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
     if(wallet) {
       const search = conn.db("identifier").collection("VirtualInfo")
       let orderArr = await search.find({wallet: wallet, orderStatus: {$in:[2, 3, 4, 5, 6]}}).toArray()
@@ -340,14 +350,17 @@ rentVirtual.post('/getVirtual', urlEcode, async (request, response ,next) => {
       msg:error.message,
       success: false
     })
+  } finally {
+    if (conn != null) conn.close()
   }
 })
 
 // 确认租用
 rentVirtual.post('/confirmRent', urlEcode, async (request, response ,next) => {
+  let conn = null;
   try {
     const { id, machine_id } = request.body
-    let conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
     if(id&&machine_id) {
       const search = conn.db("identifier").collection("VirtualInfo")
       const wallet = conn.db("identifier").collection("temporaryWallet")
@@ -394,14 +407,17 @@ rentVirtual.post('/confirmRent', urlEcode, async (request, response ,next) => {
       msg:error.message,
       success: false
     })
+  } finally {
+    if (conn != null) conn.close()
   }
 })
 
 // 续费
 rentVirtual.post('/renewRent', urlEcode, async (request, response ,next) => {
+  let conn = null;
   try {
     const { id, machine_id, add_day, dbc, wallet } = request.body
-    let conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
     if(id&&machine_id&&add_day&&dbc) {
       const search = conn.db("identifier").collection("VirtualInfo")
       const getwallet = conn.db("identifier").collection("temporaryWallet")
@@ -470,17 +486,20 @@ rentVirtual.post('/renewRent', urlEcode, async (request, response ,next) => {
       msg:error.message,
       success: false
     })
+  } finally {
+    if (conn != null) conn.close()
   }
 })
 
 // 创建虚拟机
 rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => {
+  let conn = null;
   try {
     const { id, machine_id, ssh_port, gpu_count, cpu_cores, mem_rate, disk_size, vnc_port, nonce, sign, wallet } = request.body
     if(id&&machine_id&&nonce&&sign&&wallet) {
       let hasNonce = await Verify(nonce, sign, wallet)
       if (hasNonce) {
-        let conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+        conn = await MongoClient.connect(url, { useUnifiedTopology: true })
         const searchNonce = conn.db("identifier").collection("nonceList")
         let NonceInfo = await searchNonce.find({wallet: wallet, nonce: nonce, belong: 'rentvirtual'}).toArray()
         if (!NonceInfo.length) {
@@ -565,17 +584,20 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
       msg:error.message,
       success: false
     })
+  } finally {
+    if (conn != null) conn.close()
   }
 })
 
 // 查看虚拟机 
 rentVirtual.post('/getVirTask', urlEcode, async (request, response ,next) => {
+  let conn = null;
   try {
     const { id, nonce, sign, wallet, machine_id } = request.body
     if(id&&nonce&&sign&&wallet) {
       let hasNonce = await Verify(nonce, sign, wallet)
       if (hasNonce) {
-        let conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+        conn = await MongoClient.connect(url, { useUnifiedTopology: true })
         const searchNonce = conn.db("identifier").collection("nonceList")
         let NonceInfo = await searchNonce.find({wallet: wallet, nonce: nonce, belong: 'rentvirtual' }).toArray()
         if (!NonceInfo.length) {
@@ -645,15 +667,18 @@ rentVirtual.post('/getVirTask', urlEcode, async (request, response ,next) => {
       msg:error.message,
       success: false
     })
+  } finally {
+    if (conn != null) conn.close()
   }
 })
 
 // 重启虚拟机
 rentVirtual.post('/restartVir', urlEcode, async (request, response ,next) => {
+  let conn = null;
   try {
     const { id, task_id, machine_id } = request.body
     if(id&&task_id) {
-      let conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
       const getwallet = conn.db("identifier").collection("temporaryWallet")
       let walletArr = await getwallet.find({_id: id}).toArray()
       let walletinfo = walletArr[0]
@@ -704,5 +729,7 @@ rentVirtual.post('/restartVir', urlEcode, async (request, response ,next) => {
       msg:error.message,
       success: false
     })
+  } finally {
+    if (conn != null) conn.close()
   }
 })

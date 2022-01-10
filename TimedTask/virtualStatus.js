@@ -121,6 +121,8 @@ const checkVirtualStatus = async () => {
     }
   } catch (err) {
     console.log(err, 'checkVirtualStatus')
+  } finally {
+    if (conn != null) conn.close()
   }
 }
 

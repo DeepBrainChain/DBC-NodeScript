@@ -21,9 +21,10 @@ export const getAuditList = express.Router()
 
 // 获取用户审核列表
 getAuditList.get('/getAuditList', async (request, response ,next) => {
+  let conn = null;
   try {
     let wallet = request.query.wallet
-    let conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
     if(wallet){
       const test = conn.db("identifier").collection("auditListTest")
       let total = await test.find({wallet: wallet}).count()
@@ -47,18 +48,21 @@ getAuditList.get('/getAuditList', async (request, response ,next) => {
       msg:error.message,
       success: false
     })
-  }
+  } finally {
+    if (conn != null) conn.close()
+  } 
 })
 
 
 // 修改状态
 getAuditList.post('/changeStatus', urlEcode, async (request, response ,next) => {
+  let conn = null;
   try {
     let id = request.body.machine_id
     let wallet = request.body.wallet
     let status = request.body.status
     let size = request.body.size
-    let conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
     if (id&&status&&wallet) {
       const test = conn.db("identifier").collection("auditListTest")
       if (status == 'booked') {
@@ -94,17 +98,20 @@ getAuditList.post('/changeStatus', urlEcode, async (request, response ,next) => 
       msg:error.message,
       success: false
     })
-  }
+  } finally {
+    if (conn != null) conn.close()
+  } 
 })
 
 // 保存用户提交Hash
 getAuditList.post('/saveAuditHash', urlEcode, async (request, response ,next) => {
+  let conn = null;
   try {
     let { wallet, signature, signaturemsg } = request.body
     if (wallet&&signature&&signaturemsg) {
       let hasNonce = await Verify(signaturemsg, signature, wallet)
       if (hasNonce) {
-        let conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+        conn = await MongoClient.connect(url, { useUnifiedTopology: true })
         const searchNonce = conn.db("identifier").collection("nonceList")
         let NonceInfo = await searchNonce.find({wallet: wallet, nonce: signaturemsg, belong: 'auditvirtual'}).toArray()
         if (!NonceInfo.length) {
@@ -152,17 +159,20 @@ getAuditList.post('/saveAuditHash', urlEcode, async (request, response ,next) =>
       msg:error.message,
       success: false
     })
-  }
+  } finally {
+    if (conn != null) conn.close()
+  } 
 })
 
 // 获取用户提交Hash
 getAuditList.post('/getAuditHash', urlEcode, async (request, response ,next) => {
+  let conn = null;
   try {
     let { machine_id, wallet, signature, signaturemsg } = request.body
     if (wallet&&signature&&signaturemsg) {
       let hasNonce = await Verify(signaturemsg, signature, wallet)
       if (hasNonce) {
-        let conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+        conn = await MongoClient.connect(url, { useUnifiedTopology: true })
         const searchNonce = conn.db("identifier").collection("nonceList")
         let NonceInfo = await searchNonce.find({wallet: wallet, nonce: signaturemsg, belong: 'auditvirtual'}).toArray()
         if (!NonceInfo.length) {
@@ -210,14 +220,17 @@ getAuditList.post('/getAuditHash', urlEcode, async (request, response ,next) => 
       msg:error.message,
       success: false
     })
-  }
+  } finally {
+    if (conn != null) conn.close()
+  } 
 })
 
 // 获取用户验证GPU列表
 getAuditList.get('/getVerifyGPUList', async (request, response ,next) => {
+  let conn = null;
   try {
     let wallet = request.query.wallet
-    let conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
     if(wallet){
       const test = conn.db("identifier").collection("auditListTest")
       let total = await test.find({wallet: wallet}).count()
@@ -241,11 +254,14 @@ getAuditList.get('/getVerifyGPUList', async (request, response ,next) => {
       msg:error.message,
       success: false
     })
-  }
+  } finally {
+    if (conn != null) conn.close()
+  } 
 })
 
 // 创建虚拟机
 getAuditList.post('/createVerifyVir', urlEcode, async (request, response ,next) => {
+  let conn = null;
   try {
     const { machine_id, image_name, gpu_count, cpu_cores, mem_size, disk_size, nonce, sign, wallet } = request.body
     if(machine_id&&nonce&&sign&&wallet) {
@@ -280,7 +296,7 @@ getAuditList.post('/createVerifyVir', urlEcode, async (request, response ,next) 
         }
       }
       if (VirInfo&&VirInfo.errcode == 0) {
-        let conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+        conn = await MongoClient.connect(url, { useUnifiedTopology: true })
         const task = conn.db("identifier").collection("verifyVirInfo")
         let findResult = await task.find({ _id: machine_id}).toArray()
         if (findResult.length) {
@@ -317,15 +333,18 @@ getAuditList.post('/createVerifyVir', urlEcode, async (request, response ,next) 
       msg:error.message,
       success: false
     })
-  }
+  } finally {
+    if (conn != null) conn.close()
+  } 
 })
 
 // 查看虚拟机 
 getAuditList.post('/getVerifyVir', urlEcode, async (request, response ,next) => {
+  let conn = null;
   try {
     const { nonce, sign, wallet, machine_id } = request.body
     if(machine_id&&nonce&&sign&&wallet) {
-      let conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
       const task = conn.db("identifier").collection("verifyVirInfo")
       let findResult = await task.find({ _id: machine_id}).toArray()
       if (findResult.length) {
@@ -383,7 +402,9 @@ getAuditList.post('/getVerifyVir', urlEcode, async (request, response ,next) => 
       msg:error.message,
       success: false
     })
-  }
+  } finally {
+    if (conn != null) conn.close()
+  } 
 })
 
 // 重启虚拟机

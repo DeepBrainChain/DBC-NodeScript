@@ -167,6 +167,8 @@ const getMachine = async () => {
     }
   } catch (err) {
     console.log(err, 'getMachine')
+  } finally {
+    if (conn != null) conn.close()
   }
 }
 getMachine();

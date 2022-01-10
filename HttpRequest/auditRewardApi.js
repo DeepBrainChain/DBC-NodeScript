@@ -10,12 +10,13 @@ export const Select = express.Router()
 
 // 用户审核机器获取收益
 Select.get('/searchMachine', async (request, response ,next) => {
+  let conn = null;
   try {
     let wallet = request.query.wallet
     let pageSize = request.query.pageSize?parseInt(request.query.pageSize):1
     let pageNum = request.query.pageNum?parseInt(request.query.pageNum):20
     let perams= [(pageSize-1)*pageNum, pageNum]
-    let conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
     if(wallet){
       const test = conn.db("identifier").collection("auditRewardTest")
       let reward = await test.aggregate([{ $group : {_id : '$wallet', todayReward : { $sum : "$todayReward" },totalReward : { $sum : "$totalReward" }}}]).toArray()
@@ -45,5 +46,7 @@ Select.get('/searchMachine', async (request, response ,next) => {
       msg:error.message,
       success: false
     })
-  }
+  } finally {
+    if (conn != null) conn.close()
+  } 
 })
