@@ -150,7 +150,10 @@ export const getList = async (wallet, nowDay) => {
   } catch (err) {
     console.log("错误：" + err);
   } finally {
-    if (conn != null) conn.close();
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
   }
 }
 

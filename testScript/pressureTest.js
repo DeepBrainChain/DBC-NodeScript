@@ -70,7 +70,7 @@ export const getList = async () => {
   } catch (err) {
     console.log("错误：" + err);
   } finally {
-    if (conn != null) conn.close();
+    if (conn != null) conn.close()
     // batchTransfer()
     hour == 1 ? batchTransfer() : TF()
   }
@@ -88,7 +88,7 @@ export const batchTransfer = async () => {
   } catch (err) {
     console.log("错误：" + err);
   } finally {
-    if (conn != null) conn.close();
+    if (conn != null) conn.close()
   }
 }
 
@@ -168,7 +168,7 @@ export const Transfer = async (walletList) => {
           } catch (err) {
             console.log("错误：" + err);
           } finally {
-            if (conn != null) conn.close();
+            if (conn != null) conn.close()
           }
         }else if(method == 'BatchCompleted'){
           console.log('ExtrinsicSuccess: 全部执行')
@@ -181,7 +181,7 @@ export const Transfer = async (walletList) => {
           } catch (err) {
             console.log("错误：" + err);
           } finally {
-            if (conn != null) conn.close();
+            if (conn != null) conn.close()
           }
         }
       });

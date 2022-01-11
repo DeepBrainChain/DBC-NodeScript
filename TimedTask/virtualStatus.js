@@ -76,8 +76,19 @@ const checkVirtualStatus = async () => {
             events.forEach( async ({ event: { method, data: [error] } }) => {
               console.log(method, 'orderStatus: 2');
               if(method == 'ExtrinsicSuccess'){
-                await virInfo.deleteMany({ belong: orderArr1[i]._id })
-                await Info.updateOne({_id: orderArr1[i]._id}, {$set:{orderStatus: 5}}) // 订单取消
+                let Info1 = null
+                let virInfo1 = null
+                if (conn == null) {
+                  conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+                  Info1 = conn.db("identifier").collection("VirtualInfo")
+                  virInfo1 = conn.db("identifier").collection("virtualTask")
+                }
+                await virInfo1.deleteMany({ belong: orderArr1[i]._id })
+                await Info1.updateOne({_id: orderArr1[i]._id}, {$set:{orderStatus: 5}}) // 订单取消
+                if (conn != null){
+                  conn.close()
+                  conn = null
+                }
               }
             });
           }
@@ -112,8 +123,19 @@ const checkVirtualStatus = async () => {
           events.forEach( async ({ event: { method, data: [error] } }) => {
             console.log(method, 'orderStatus: 6');
             if(method == 'ExtrinsicSuccess'){
-              await virInfo.deleteMany({ belong: orderArr4[i]._id })
-              await Info.updateOne({_id: orderArr4[i]._id}, {$set:{orderStatus: 5}}) // 订单取消
+              let Info1 = null
+              let virInfo1 = null
+              if (conn == null) {
+                conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+                Info1 = conn.db("identifier").collection("VirtualInfo")
+                virInfo1 = conn.db("identifier").collection("virtualTask")
+              }
+              await virInfo1.deleteMany({ belong: orderArr4[i]._id })
+              await Info1.updateOne({_id: orderArr4[i]._id}, {$set:{orderStatus: 5}}) // 订单取消
+              if (conn != null){
+                conn.close()
+                conn = null
+              }
             }
           });
         }
@@ -122,7 +144,10 @@ const checkVirtualStatus = async () => {
   } catch (err) {
     console.log(err, 'checkVirtualStatus')
   } finally {
-    if (conn != null) conn.close()
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
   }
 }
 

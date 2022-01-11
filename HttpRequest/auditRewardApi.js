@@ -47,6 +47,9 @@ Select.get('/searchMachine', async (request, response ,next) => {
       success: false
     })
   } finally {
-    if (conn != null) conn.close()
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
   } 
 })

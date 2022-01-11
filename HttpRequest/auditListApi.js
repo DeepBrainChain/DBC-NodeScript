@@ -49,7 +49,10 @@ getAuditList.get('/getAuditList', async (request, response ,next) => {
       success: false
     })
   } finally {
-    if (conn != null) conn.close()
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
   } 
 })
 
@@ -99,7 +102,10 @@ getAuditList.post('/changeStatus', urlEcode, async (request, response ,next) => 
       success: false
     })
   } finally {
-    if (conn != null) conn.close()
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
   } 
 })
 
@@ -160,7 +166,10 @@ getAuditList.post('/saveAuditHash', urlEcode, async (request, response ,next) =>
       success: false
     })
   } finally {
-    if (conn != null) conn.close()
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
   } 
 })
 
@@ -221,7 +230,10 @@ getAuditList.post('/getAuditHash', urlEcode, async (request, response ,next) => 
       success: false
     })
   } finally {
-    if (conn != null) conn.close()
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
   } 
 })
 
@@ -255,7 +267,10 @@ getAuditList.get('/getVerifyGPUList', async (request, response ,next) => {
       success: false
     })
   } finally {
-    if (conn != null) conn.close()
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
   } 
 })
 
@@ -334,7 +349,10 @@ getAuditList.post('/createVerifyVir', urlEcode, async (request, response ,next) 
       success: false
     })
   } finally {
-    if (conn != null) conn.close()
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
   } 
 })
 
@@ -403,7 +421,10 @@ getAuditList.post('/getVerifyVir', urlEcode, async (request, response ,next) => 
       success: false
     })
   } finally {
-    if (conn != null) conn.close()
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
   } 
 })
 

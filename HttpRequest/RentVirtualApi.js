@@ -167,7 +167,10 @@ rentVirtual.post('/getWallet', urlEcode, async (request, response ,next) => {
       success: false
     })
   } finally {
-    if (conn != null) conn.close()
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
   }
 })
 
@@ -235,7 +238,10 @@ rentVirtual.post('/createVirOrder', urlEcode, async (request, response ,next) =>
       success: false
     })
   } finally {
-    if (conn != null) conn.close()
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
   }
 })
 
@@ -279,6 +285,10 @@ rentVirtual.post('/rentmachine', urlEcode, async (request, response ,next) => {
                         msg: decoded.method + '创建待确认租用订单失败，退币失败，请联系客服处理',
                         content: id
                       })
+                      if (conn != null){
+                        conn.close()
+                        conn = null
+                      }
                     }else if(method == 'ExtrinsicSuccess'){
                       await search.updateOne({_id: id}, {$set:{orderStatus: 0}})
                       response.json({
@@ -287,6 +297,10 @@ rentVirtual.post('/rentmachine', urlEcode, async (request, response ,next) => {
                         msg: decoded.method + '创建待确认租用订单失败，DBC已退回原账户',
                         content: id
                       })
+                      if (conn != null){
+                        conn.close()
+                        conn = null
+                      }
                     }
                   });
                 }
@@ -299,6 +313,10 @@ rentVirtual.post('/rentmachine', urlEcode, async (request, response ,next) => {
                 msg: '创建待确认租用订单成功',
                 content: id
               })
+              if (conn != null){
+                conn.close()
+                conn = null
+              }
             }
           });
         }
@@ -310,6 +328,10 @@ rentVirtual.post('/rentmachine', urlEcode, async (request, response ,next) => {
         msg:'获取参数信息失败',
         success: false
       })
+      if (conn != null){
+        conn.close()
+        conn = null
+      }
     }
   } catch (error) {
     response.json({
@@ -317,8 +339,10 @@ rentVirtual.post('/rentmachine', urlEcode, async (request, response ,next) => {
       msg:error.message,
       success: false
     })
-  } finally {
-    if (conn != null) conn.close()
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
   }
 })
 
@@ -351,7 +375,10 @@ rentVirtual.post('/getVirtual', urlEcode, async (request, response ,next) => {
       success: false
     })
   } finally {
-    if (conn != null) conn.close()
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
   }
 })
 
@@ -382,6 +409,10 @@ rentVirtual.post('/confirmRent', urlEcode, async (request, response ,next) => {
                 msg: decoded.method + '-->租用失败，请重试',
                 content: id
               })
+              if (conn != null){
+                conn.close()
+                conn = null
+              }
             }else if(method == 'ExtrinsicSuccess'){
               await search.updateOne({_id: id}, {$set:{orderStatus: 3}})
               response.json({
@@ -390,6 +421,10 @@ rentVirtual.post('/confirmRent', urlEcode, async (request, response ,next) => {
                 msg: '租用成功，订单转为正在使用中',
                 content: id
               })
+              if (conn != null){
+                conn.close()
+                conn = null
+              }
             }
           });
         }
@@ -400,6 +435,10 @@ rentVirtual.post('/confirmRent', urlEcode, async (request, response ,next) => {
         msg:'参数不能为空',
         success: false
       })
+      if (conn != null){
+        conn.close()
+        conn = null
+      }
     }
   } catch (error) {
     response.json({
@@ -407,8 +446,10 @@ rentVirtual.post('/confirmRent', urlEcode, async (request, response ,next) => {
       msg:error.message,
       success: false
     })
-  } finally {
-    if (conn != null) conn.close()
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
   }
 })
 
@@ -450,6 +491,10 @@ rentVirtual.post('/renewRent', urlEcode, async (request, response ,next) => {
                         msg: decoded.method + '-->续费失败,DBC退币失败，请联系客服处理',
                         content: id
                       })
+                      if (conn != null){
+                        conn.close()
+                        conn = null
+                      }
                     }else if(method == 'ExtrinsicSuccess'){
                       response.json({
                         success: false,
@@ -457,6 +502,10 @@ rentVirtual.post('/renewRent', urlEcode, async (request, response ,next) => {
                         msg: decoded.method + '-->续费失败，DBC已退回原账户',
                         content: id
                       })
+                      if (conn != null){
+                        conn.close()
+                        conn = null
+                      }
                     }
                   });
                 }
@@ -469,6 +518,10 @@ rentVirtual.post('/renewRent', urlEcode, async (request, response ,next) => {
                 msg: '续费成功',
                 content: id
               })
+              if (conn != null){
+                conn.close()
+                conn = null
+              }
             }
           });
         }
@@ -479,6 +532,10 @@ rentVirtual.post('/renewRent', urlEcode, async (request, response ,next) => {
         msg:'参数不能为空',
         success: false
       })
+      if (conn != null){
+        conn.close()
+        conn = null
+      }
     }
   } catch (error) {
     response.json({
@@ -486,8 +543,10 @@ rentVirtual.post('/renewRent', urlEcode, async (request, response ,next) => {
       msg:error.message,
       success: false
     })
-  } finally {
-    if (conn != null) conn.close()
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
   }
 })
 
@@ -585,7 +644,10 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
       success: false
     })
   } finally {
-    if (conn != null) conn.close()
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
   }
 })
 
@@ -668,7 +730,10 @@ rentVirtual.post('/getVirTask', urlEcode, async (request, response ,next) => {
       success: false
     })
   } finally {
-    if (conn != null) conn.close()
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
   }
 })
 
@@ -730,6 +795,9 @@ rentVirtual.post('/restartVir', urlEcode, async (request, response ,next) => {
       success: false
     })
   } finally {
-    if (conn != null) conn.close()
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
   }
 })
