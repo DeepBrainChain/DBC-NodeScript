@@ -155,10 +155,10 @@ let committeeMachineListInfo = []
 
 const getMachine = async () => {
   try {
+    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
     let committee = await committeeList()
     for(let i = 0; i < committee.length; i++){
       let info = await committeeMachine(committee[i]);
-      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
       const test = conn.db("identifier").collection("auditListTest")
       await test.deleteMany({ wallet: committee[i] })
       if (info&&info.length) {

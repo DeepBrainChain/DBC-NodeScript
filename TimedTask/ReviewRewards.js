@@ -165,6 +165,11 @@ const firstRun = async () => {
     await test.deleteMany({})
   } catch (err) {
     console.log("firstRun错误：" + err);
+  } finally {
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
   }
 }
 
