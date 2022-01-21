@@ -180,10 +180,19 @@ export const scheduleCronstyle = () => {
   schedule.scheduleJob('00 50 * * * *',function(){
     getMachine();
   });
+  schedule.scheduleJob('00 40 * * * *',function(){
+    getMachine();
+  });
   schedule.scheduleJob('00 30 * * * *',function(){
     getMachine();
   });
+  schedule.scheduleJob('00 20 * * * *',function(){
+    getMachine();
+  });
   schedule.scheduleJob('00 10 * * * *',function(){
+    getMachine();
+  });
+  schedule.scheduleJob('00 01 * * * *',function(){
     getMachine();
   });
 }

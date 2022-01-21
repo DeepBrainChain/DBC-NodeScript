@@ -348,11 +348,17 @@ export const wssChain = {
  * baseUrl c++ 端口
  */
 // export const baseUrl = 'http://115.231.234.37:5052' // 聪图云私链端口
-export const baseUrl = 'http://115.231.234.32:5052' // 主网测试端口
+// export const baseUrl = 'http://115.231.234.32:5052' // 主网测试端口
+export const baseUrl = 'http://183.232.237.170:5016' // 主网测试端口 -- 备用
 // export const baseUrl = 'http://115.231.234.34:5052' // 主网端口
 
 /**
  * 连接mongo数据库
  */
-export const mongoUrl = 'mongodb://localhost:27017/identifier' // 本地访问mongo
-// export const mongoUrl = 'mongodb://dbc:dbcDBC2017xY@localhost:27017/identifier' // 服务器访问mongo
+// export const mongoUrl = 'mongodb://localhost:27017/identifier' // 本地访问mongo
+export const mongoUrl = 'mongodb://dbc:dbcDBC2017xY@localhost:27017/identifier' // 服务器访问mongo
+
+/**
+ * 定义租用机器扣除的指定钱包
+ */
+export const designatedWallet = '5F7L9bc3q4XdhVstJjVB2o7S8RHz2YKsHUB6k3uQpErTmVWu' // 手续费指定钱包

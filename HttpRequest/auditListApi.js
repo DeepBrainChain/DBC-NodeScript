@@ -481,3 +481,31 @@ getAuditList.post('/restartVerifyVir', urlEcode, async (request, response ,next)
     })
   }
 })
+
+
+// 获取地域系数
+getAuditList.get('/getCoefficient', async (request, response ,next) => {
+  let conn = null;
+  try {
+    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+    const test = conn.db("identifier").collection("coefficient")
+    var arr = await test.find({}).toArray()
+    response.json({
+      success: true,
+      code: 10001,
+      msg:'获取成功',
+      content: arr
+    })
+  } catch (error) {
+    response.json({
+      code: -10001,
+      msg:error.message,
+      success: false
+    })
+  } finally {
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
+  } 
+})

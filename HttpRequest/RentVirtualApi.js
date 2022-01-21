@@ -123,6 +123,43 @@ export const transfer = async ( value, seed, toWallet) => {
     console.log(`${res.message}`);
   })
 }
+
+// 获取租用虚拟机加价百分比
+rentVirtual.post('/getPercentage', urlEcode, async (request, response ,next) => {
+  let conn = null;
+  try {
+    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+    const test = conn.db("identifier").collection("DBCPercentage")
+    let arr = await test.find({_id: 'percentage'}).toArray()
+    if (arr.length) {
+      response.json({
+        success: true,
+        code: 10001,
+        msg: '获取加价成功',
+        content: arr[0]
+      })
+    } else {
+      response.json({
+        success: true,
+        code: 10001,
+        msg: '获取加价成功',
+        content: { percentage: 0 }
+      })
+    }
+  } catch (error) {
+    response.json({
+      code: -10001,
+      msg:error.message,
+      success: false
+    })
+  } finally {
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
+  }
+})
+
 // 生成临时钱包四位随机数
 rentVirtual.post('/getWallet', urlEcode, async (request, response ,next) => {
   let conn = null;
@@ -550,11 +587,87 @@ rentVirtual.post('/renewRent', urlEcode, async (request, response ,next) => {
   }
 })
 
+// 创建时查询机器的相关信息
+rentVirtual.post('/getMachineInfo', urlEcode, async (request, response ,next) => {
+  let conn = null;
+  try {
+    const { machine_id } = request.body
+    if(machine_id) {
+      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      let VirInfo = {}
+      try {
+        VirInfo = await httpRequest({
+          url: baseUrl + "/api/v1/mining_nodes",
+          method: "post",
+          json: true,
+          headers: {},
+          body: {
+            "peer_nodes_list": [machine_id], 
+            "additional": {
+              
+            }
+          }
+        })
+      } catch (err) {
+        VirInfo = {
+          message: err.message
+        }
+      }
+      if (VirInfo&&VirInfo.errcode == 0) {
+        response.json({
+          code: 10001,
+          msg: '获取成功',
+          success: true,
+          content: VirInfo.message
+        })
+      } else {
+        response.json({
+          code: -2,
+          msg: VirInfo.message,
+          success: false
+        })
+      }
+    }else{
+      response.json({
+        code: -1,
+        msg:'参数不能为空',
+        success: false
+      })
+    }
+  } catch (error) {
+    response.json({
+      code: -10001,
+      msg:error.message,
+      success: false
+    })
+  } finally {
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
+  }
+})
+
 // 创建虚拟机
 rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => {
   let conn = null;
   try {
-    const { id, machine_id, ssh_port, gpu_count, cpu_cores, mem_rate, disk_size, vnc_port, nonce, sign, wallet } = request.body
+    const { 
+      id, 
+      machine_id, 
+      ssh_port,
+      image_name, 
+      gpu_count, 
+      cpu_cores, 
+      mem_rate, 
+      disk_size,
+      vnc_port, 
+      port_min,
+      port_max,
+      nonce, 
+      sign, 
+      wallet 
+    } = request.body
     if(id&&machine_id&&nonce&&sign&&wallet) {
       let hasNonce = await Verify(nonce, sign, wallet)
       if (hasNonce) {
@@ -578,7 +691,8 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
                 "peer_nodes_list": [machine_id], 
                 "additional": {
                   "ssh_port": String(ssh_port),
-                  "image_name": "ubuntu.qcow2",
+                  "custom_port": [`tcp,${port_min}-${port_max}`,`udp,${port_min}-${port_max}`],
+                  "image_name": String(image_name),
                   "gpu_count": String(gpu_count),
                   "cpu_cores": String(cpu_cores),
                   "mem_size": String(mem_rate),
@@ -602,12 +716,16 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
             await task.insertOne({
               _id: VirInfo.message.task_id,
               belong: id,
+              images: image_name,
+              port_min: port_min,
+              port_max: port_max,
               ...VirInfo.message
             })
             response.json({
               code: 10001,
               msg: '创建中',
-              success: true
+              success: true,
+              content: VirInfo.message
             })
           } else {
             response.json({
@@ -772,6 +890,71 @@ rentVirtual.post('/restartVir', urlEcode, async (request, response ,next) => {
         response.json({
           code: 10001,
           msg: '重启成功',
+          success: true
+        })
+      }else {
+        response.json({
+          code: -2,
+          msg: taskinfo.message,
+          success: false
+        })
+      }
+    }else{
+      response.json({
+        code: -1,
+        msg:'参数不能为空',
+        success: false
+      })
+    }
+  } catch (error) {
+    response.json({
+      code: -10001,
+      msg:error.message,
+      success: false
+    })
+  } finally {
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
+  }
+})
+
+// 删除虚拟机
+rentVirtual.post('/deleteVir', urlEcode, async (request, response ,next) => {
+  let conn = null;
+  try {
+    const { id, task_id, machine_id } = request.body
+    if(id&&task_id) {
+      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      const getwallet = conn.db("identifier").collection("temporaryWallet")
+      let walletArr = await getwallet.find({_id: id}).toArray()
+      let walletinfo = walletArr[0]
+      let taskinfo = {}
+      try {
+        let { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
+        taskinfo = await httpRequest({
+          url: baseUrl + "/api/v1/tasks/delete/"+task_id,
+          method: "post",
+          json: true,
+          headers: {},
+          body: {
+            "peer_nodes_list": [machine_id], 
+            "additional": {},
+            "nonce": nonce1,
+            "sign": sign1,
+            "wallet": walletinfo.wallet
+          }
+        })
+      } catch (err) {
+        taskinfo = {
+          message: err.message
+        }
+      }
+      if (taskinfo&&taskinfo.errcode == 0) {
+        response.json({
+          code: 10001,
+          msg: '删除成功',
           success: true
         })
       }else {
