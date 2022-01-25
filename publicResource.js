@@ -355,8 +355,8 @@ export const baseUrl = 'http://183.232.237.170:5016' // 主网测试端口 -- �
 /**
  * 连接mongo数据库
  */
-// export const mongoUrl = 'mongodb://localhost:27017/identifier' // 本地访问mongo
-export const mongoUrl = 'mongodb://dbc:dbcDBC2017xY@localhost:27017/identifier' // 服务器访问mongo
+export const mongoUrl = 'mongodb://localhost:27017/identifier' // 本地访问mongo
+// export const mongoUrl = 'mongodb://d**:d********Y@localhost:27017/identifier' // 服务器访问mongo
 
 /**
  * 定义租用机器扣除的指定钱包

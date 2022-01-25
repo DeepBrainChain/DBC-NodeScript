@@ -662,8 +662,12 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
       mem_rate, 
       disk_size,
       vnc_port, 
+      rdp_port,
       port_min,
       port_max,
+      operation_system,
+      bios_mode,
+      multicast,
       nonce, 
       sign, 
       wallet 
@@ -698,6 +702,10 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
                   "mem_size": String(mem_rate),
                   "disk_size": String(disk_size),
                   "vnc_port": String(vnc_port),
+                  "rdp_port": String(rdp_port),
+                  "operation_system": String(operation_system),
+                  "bios_mode": String(bios_mode),
+                  "multicast": JSON.parse(multicast),
                   "vm_xml": "",
                   "vm_xml_url": ""
                 },
@@ -719,6 +727,8 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
               images: image_name,
               port_min: port_min,
               port_max: port_max,
+              rdp_port: rdp_port,
+              multicast: JSON.parse(multicast),
               ...VirInfo.message
             })
             response.json({
@@ -746,6 +756,126 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
           code: -2,
           msg:'签名验证失败',
           success: false
+        })
+      }
+    }else{
+      response.json({
+        code: -1,
+        msg:'参数不能为空',
+        success: false
+      })
+    }
+  } catch (error) {
+    response.json({
+      code: -10001,
+      msg:error.message,
+      success: false
+    })
+  } finally {
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
+  }
+})
+
+// 定时查询虚拟机
+rentVirtual.post('/timedQueryTask', urlEcode, async (request, response ,next) => {
+  let conn = null;
+  try {
+    const { 
+      id, 
+      machine_id,
+      task_id
+    } = request.body
+    if(id&&machine_id) {
+      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      const getSession = conn.db("identifier").collection("sessionInfo");
+      let Session = await getSession.find({_id: id}).toArray()
+      let VirInfo = {}
+      if (Session.length) {
+        try {
+          VirInfo = await httpRequest({
+            url: baseUrl + "/api/v1/tasks/"+ task_id,
+            method: "post",
+            json: true,
+            headers: {},
+            body: {
+              "peer_nodes_list": [machine_id], 
+              "additional": {},
+              "session_id": Session[0].session_id,
+              "session_id_sign": Session[0].session_id_sign
+            }
+          })
+        } catch (err) {
+          VirInfo = {
+            message: err.message
+          }
+        }
+      } else {
+        const getwallet = conn.db("identifier").collection("temporaryWallet")
+        let walletArr = await getwallet.find({_id: id}).toArray()
+        let walletinfo = walletArr[0]
+        let { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
+        let newsession = {}
+        try {
+          newsession = await httpRequest({
+            url: baseUrl + "/api/v1/mining_nodes/session_id",
+            method: "post",
+            json: true,
+            headers: {},
+            body: {
+              "peer_nodes_list": [machine_id], 
+              "additional": { },
+              "nonce": nonce1,
+              "sign": sign1,
+              "wallet": walletinfo.wallet
+            }
+          })
+        } catch (err) {
+          newsession = {
+            message: err.message
+          }
+        }
+        if (newsession&&newsession.errcode == 0) {
+          await getSession.insertOne({
+            _id: id,
+            session_id: newsession.message.session_id,
+            session_id_sign: newsession.message.session_id_sign
+          })
+          try {
+            VirInfo = await httpRequest({
+              url: baseUrl + "/api/v1/tasks/"+ task_id,
+              method: "post",
+              json: true,
+              headers: {},
+              body: {
+                "peer_nodes_list": [machine_id], 
+                "additional": {},
+                "session_id": newsession.message.session_id,
+                "session_id_sign": newsession.message.session_id_sign
+              }
+            })
+          } catch (err) {
+            VirInfo = {
+              message: err.message
+            }
+          }
+        }
+      }
+      if (VirInfo && VirInfo.errcode == 0) {
+        response.json({
+          code: -1,
+          msg:'获取成功',
+          success: true,
+          cntent: VirInfo.message
+        })
+      } else {
+        response.json({
+          code: -2,
+          msg:'获取失败',
+          success: false,
+          cntent: VirInfo.message
         })
       }
     }else{
