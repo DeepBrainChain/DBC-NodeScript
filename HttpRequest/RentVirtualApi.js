@@ -67,6 +67,13 @@ const CreateSignature = async (seed) => {
   const signature = u8aToHex(signUrl.sign(nonce))
   return { nonce, signature }
 }
+
+const CreateSignature1 = async (seed, nonce) => {
+  await cryptoWaitReady()
+  let signUrl = await keyring.addFromUri(seed)
+  const signature = u8aToHex(signUrl.sign(nonce))
+  return { nonce, signature }
+}
 // 验证签名
 const Verify = async (msg, sign, wallet) => {
   await cryptoWaitReady();
@@ -215,7 +222,7 @@ rentVirtual.post('/getWallet', urlEcode, async (request, response ,next) => {
 rentVirtual.post('/createVirOrder', urlEcode, async (request, response ,next) => {
   let conn = null;
   try {
-    const {id, machine_id, dollar, day, count, dbc, wallet } = request.body
+    const {id, machine_id, dollar, day, count, dbc, wallet, language } = request.body
     conn = await MongoClient.connect(url, { useUnifiedTopology: true })
     if(id&&machine_id&&dollar&&day&&count&&dbc&&wallet) {
       const test = conn.db("identifier").collection("MachineDetailsInfo")
@@ -241,6 +248,7 @@ rentVirtual.post('/createVirOrder', urlEcode, async (request, response ,next) =>
           count,
           dbc,
           wallet,
+          language,
           orderStatus,
           createTime,
           errRefund
@@ -285,8 +293,8 @@ rentVirtual.post('/createVirOrder', urlEcode, async (request, response ,next) =>
 // 支付完成，修改状态，租用机器 订单状态： 0：待支付 1：已支付，待租用 2：待确认租用 3：正在使用中 4：订单结束 5：订单取消 6.正在退币中，请稍后(只针对订单取消状态之前) errRefund：退币异常
 rentVirtual.post('/rentmachine', urlEcode, async (request, response ,next) => {
   let conn = null;
+  const { id } = request.body
   try {
-    const { id } = request.body
     conn = await MongoClient.connect(url, { useUnifiedTopology: true })
     if(id) {
       const search = conn.db("identifier").collection("VirtualInfo")
@@ -371,15 +379,53 @@ rentVirtual.post('/rentmachine', urlEcode, async (request, response ,next) => {
       }
     }
   } catch (error) {
-    response.json({
-      code: -10001,
-      msg:error.message,
-      success: false
+    const catchError = error
+    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+    const search = conn.db("identifier").collection("VirtualInfo")
+    const wallet = conn.db("identifier").collection("temporaryWallet")
+    await search.updateOne({_id: id}, {$set:{orderStatus: 1}})
+    let orderArr = await search.find({_id: id}).toArray()
+    let orderinfo = orderArr[0]
+    let walletArr = await wallet.find({_id: id}).toArray()
+    let walletinfo = walletArr[0]
+    await GetApi()
+    let accountFromKeyring = await keyring.addFromUri(walletinfo.seed)
+    const siPower = new BN(15)
+    const bob = inputToBn(String(orderinfo.dbc-10), siPower, 15)
+    await cryptoWaitReady();
+    await api.tx.balances
+    .transfer( orderinfo.wallet, bob )
+    .signAndSend( accountFromKeyring , ( { events = [], status , dispatchError  } ) => {
+      if (status.isInBlock) {
+        events.forEach( async ({ event: { method, data: [error] } }) => {
+          if (error.isModule && method == 'ExtrinsicFailed') {
+            await search.updateOne({_id: id}, {$set:{orderStatus: 0, errRefund: true}})
+            response.json({
+              success: false,
+              code: -3,
+              msg: catchError.message + '创建待确认租用订单失败，退币失败，请联系客服处理',
+              content: id
+            })
+            if (conn != null){
+              conn.close()
+              conn = null
+            }
+          }else if(method == 'ExtrinsicSuccess'){
+            await search.updateOne({_id: id}, {$set:{orderStatus: 0}})
+            response.json({
+              success: false,
+              code: -2,
+              msg: catchError.message + '创建待确认租用订单失败，DBC已退回原账户',
+              content: id
+            })
+            if (conn != null){
+              conn.close()
+              conn = null
+            }
+          }
+        });
+      }
     })
-    if (conn != null){
-      conn.close()
-      conn = null
-    }
   }
 })
 
@@ -391,7 +437,7 @@ rentVirtual.post('/getVirtual', urlEcode, async (request, response ,next) => {
     conn = await MongoClient.connect(url, { useUnifiedTopology: true })
     if(wallet) {
       const search = conn.db("identifier").collection("VirtualInfo")
-      let orderArr = await search.find({wallet: wallet, orderStatus: {$in:[2, 3, 4, 5, 6]}}).toArray()
+      let orderArr = await search.find({wallet: wallet, orderStatus: {$in:[2, 3, 4, 5, 6]}}).sort({"createTime": -1}).toArray()
       response.json({
         success: true,
         code: 10001,
@@ -791,7 +837,10 @@ rentVirtual.post('/timedQueryTask', urlEcode, async (request, response ,next) =>
     if(id&&machine_id) {
       conn = await MongoClient.connect(url, { useUnifiedTopology: true })
       const getSession = conn.db("identifier").collection("sessionInfo");
+      const virtask = conn.db("identifier").collection("virtualTask")
       let Session = await getSession.find({_id: id}).toArray()
+      let taskArr = await virtask.find({ _id: task_id }).toArray()
+      let taskArrInfo = taskArr[0]
       let VirInfo = {}
       if (Session.length) {
         try {
@@ -838,10 +887,11 @@ rentVirtual.post('/timedQueryTask', urlEcode, async (request, response ,next) =>
           }
         }
         if (newsession&&newsession.errcode == 0) {
+          let { nonce: nonce1, signature: sign1 } = await CreateSignature1(walletinfo.seed, newsession.message.session_id)
           await getSession.insertOne({
             _id: id,
-            session_id: newsession.message.session_id,
-            session_id_sign: newsession.message.session_id_sign
+            session_id: nonce1,
+            session_id_sign: sign1
           })
           try {
             VirInfo = await httpRequest({
@@ -852,8 +902,8 @@ rentVirtual.post('/timedQueryTask', urlEcode, async (request, response ,next) =>
               body: {
                 "peer_nodes_list": [machine_id], 
                 "additional": {},
-                "session_id": newsession.message.session_id,
-                "session_id_sign": newsession.message.session_id_sign
+                "session_id": nonce1,
+                "session_id_sign": sign1
               }
             })
           } catch (err) {
@@ -864,18 +914,20 @@ rentVirtual.post('/timedQueryTask', urlEcode, async (request, response ,next) =>
         }
       }
       if (VirInfo && VirInfo.errcode == 0) {
+        await virtask.updateOne({ _id: task_id }, { $set: {...taskArrInfo, ...VirInfo.message} })
+        let resultArr = await virtask.find({ _id: task_id }).toArray()
         response.json({
-          code: -1,
+          code: 10001,
           msg:'获取成功',
           success: true,
-          cntent: VirInfo.message
+          content: resultArr[0]
         })
       } else {
         response.json({
           code: -2,
           msg:'获取失败',
           success: false,
-          cntent: VirInfo.message
+          content: VirInfo.message
         })
       }
     }else{
@@ -1058,6 +1110,7 @@ rentVirtual.post('/deleteVir', urlEcode, async (request, response ,next) => {
     if(id&&task_id) {
       conn = await MongoClient.connect(url, { useUnifiedTopology: true })
       const getwallet = conn.db("identifier").collection("temporaryWallet")
+      const virtualTask = conn.db("identifier").collection("virtualTask")
       let walletArr = await getwallet.find({_id: id}).toArray()
       let walletinfo = walletArr[0]
       let taskinfo = {}
@@ -1082,6 +1135,7 @@ rentVirtual.post('/deleteVir', urlEcode, async (request, response ,next) => {
         }
       }
       if (taskinfo&&taskinfo.errcode == 0) {
+        await virtualTask.deleteOne({_id: task_id})
         response.json({
           code: 10001,
           msg: '删除成功',

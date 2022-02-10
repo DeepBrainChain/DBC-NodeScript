@@ -47,7 +47,7 @@ export const inputToBn = (input, siPower, basePower) => {
   await GetApi()
   const data = await api.query.system.account(wallet)
   const balance = data.toJSON();
-  return balance.data.free
+  return balance.data.free / Math.pow(10, 15)
 }
 
 const checkWalletFee = async () => {
