@@ -59,6 +59,7 @@ const checkVirtualStatus = async () => {
     let orderArr2 = await Info.find({orderStatus: 3}).toArray() // 查询订单中正在使用中的订单
     let orderArr3 = await Info.find({orderStatus: 4}).toArray() // 查询订单中结束的订单
     let orderArr4 = await Info.find({orderStatus: 6}).toArray() // 查询订单中正在退币的订单
+    let orderArr5 = await Info.find({orderStatus: 5}).toArray() // 查询订单中取消的订单
     for(let i = 0; i < orderArr1.length; i++){
       if (orderArr1[i].createTime + 30*60*1000 < Date.now()) {
         await Info.updateOne({_id: orderArr1[i]._id}, {$set:{orderStatus: 6}})
@@ -77,13 +78,13 @@ const checkVirtualStatus = async () => {
               console.log(method, 'orderStatus: 2');
               if(method == 'ExtrinsicSuccess'){
                 let Info1 = null
-                let virInfo1 = null
+                // let virInfo1 = null
                 if (conn == null) {
                   conn = await MongoClient.connect(url, { useUnifiedTopology: true })
                   Info1 = conn.db("identifier").collection("VirtualInfo")
-                  virInfo1 = conn.db("identifier").collection("virtualTask")
+                  // virInfo1 = conn.db("identifier").collection("virtualTask")
                 }
-                await virInfo1.deleteMany({ belong: orderArr1[i]._id })
+                // await virInfo1.deleteMany({ belong: orderArr1[i]._id })
                 await Info1.updateOne({_id: orderArr1[i]._id}, {$set:{orderStatus: 5}}) // 订单取消
                 if (conn != null){
                   conn.close()
@@ -103,9 +104,14 @@ const checkVirtualStatus = async () => {
         // }
       }
     }
-    for(let i = 0; i < orderArr3.length; i++){
-      if ((orderArr3[i].createTime + orderArr3[i].day*24*60*60*1000 + 864000000) < Date.now()) {
+    for(let i = 0; i < orderArr3.length; i++){ // 7天删除数据库中对应的结束订单虚拟机
+      if ((orderArr3[i].createTime + orderArr3[i].day*24*60*60*1000 + 604800000) < Date.now()) {
         await virInfo.deleteMany({ belong: orderArr3[i]._id })
+      }
+    }
+    for(let i = 0; i < orderArr5.length; i++){ // 7天删除数据库中对应的取消订单虚拟机
+      if ((orderArr5[i].createTime + orderArr5[i].day*24*60*60*1000 + 604800000) < Date.now()) {
+        await virInfo.deleteMany({ belong: orderArr5[i]._id })
       }
     }
     for(let i = 0; i < orderArr4.length; i++){
@@ -124,13 +130,13 @@ const checkVirtualStatus = async () => {
             console.log(method, 'orderStatus: 6');
             if(method == 'ExtrinsicSuccess'){
               let Info1 = null
-              let virInfo1 = null
+              // let virInfo1 = null
               if (conn == null) {
                 conn = await MongoClient.connect(url, { useUnifiedTopology: true })
                 Info1 = conn.db("identifier").collection("VirtualInfo")
-                virInfo1 = conn.db("identifier").collection("virtualTask")
+                // virInfo1 = conn.db("identifier").collection("virtualTask")
               }
-              await virInfo1.deleteMany({ belong: orderArr4[i]._id })
+              // await virInfo1.deleteMany({ belong: orderArr4[i]._id })
               await Info1.updateOne({_id: orderArr4[i]._id}, {$set:{orderStatus: 5}}) // 订单取消
               if (conn != null){
                 conn.close()
