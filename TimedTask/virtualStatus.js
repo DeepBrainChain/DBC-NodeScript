@@ -105,11 +105,13 @@ const checkVirtualStatus = async () => {
       }
     }
     for(let i = 0; i < orderArr3.length; i++){ // 7天删除数据库中对应的结束订单虚拟机
+      await virInfo.updateMany({ belong: orderArr3[i]._id }, {$set:{status: 'closed'}})
       if ((orderArr3[i].createTime + orderArr3[i].day*24*60*60*1000 + 604800000) < Date.now()) {
         await virInfo.deleteMany({ belong: orderArr3[i]._id })
       }
     }
     for(let i = 0; i < orderArr5.length; i++){ // 7天删除数据库中对应的取消订单虚拟机
+      await virInfo.updateMany({ belong: orderArr5[i]._id }, {$set:{status: 'closed'}})
       if ((orderArr5[i].createTime + orderArr5[i].day*24*60*60*1000 + 604800000) < Date.now()) {
         await virInfo.deleteMany({ belong: orderArr5[i]._id })
       }

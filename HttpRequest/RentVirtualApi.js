@@ -993,6 +993,8 @@ rentVirtual.post('/getVirTask', urlEcode, async (request, response ,next) => {
             }
             if (taskinfo&&taskinfo.errcode == 0) {
               await task.updateOne({ _id: taskArr[k].task_id }, { $set: taskinfo.message })
+            } else if (taskinfo.message == 'task_id not exist') {
+              await task.deleteOne({ _id: taskArr[k].task_id })
             }
           }
           let belongMachine = await task.find({ belong: id }).toArray()
@@ -1139,6 +1141,147 @@ rentVirtual.post('/deleteVir', urlEcode, async (request, response ,next) => {
         response.json({
           code: 10001,
           msg: '删除成功',
+          success: true
+        })
+      } else if (taskinfo.message == 'task_id not exist') {
+        await virtualTask.deleteOne({ _id: task_id })
+        response.json({
+          code: 10002,
+          msg: '删除成功',
+          success: true
+        })
+      } else {
+        response.json({
+          code: -2,
+          msg: taskinfo.message,
+          success: false
+        })
+      }
+    }else{
+      response.json({
+        code: -1,
+        msg:'参数不能为空',
+        success: false
+      })
+    }
+  } catch (error) {
+    response.json({
+      code: -10001,
+      msg:error.message,
+      success: false
+    })
+  } finally {
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
+  }
+})
+
+// 停止虚拟机
+rentVirtual.post('/stopVir', urlEcode, async (request, response ,next) => {
+  let conn = null;
+  try {
+    const { id, task_id, machine_id } = request.body
+    if(id&&task_id) {
+      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      const getwallet = conn.db("identifier").collection("temporaryWallet")
+      const virtualTask = conn.db("identifier").collection("virtualTask")
+      let walletArr = await getwallet.find({_id: id}).toArray()
+      let walletinfo = walletArr[0]
+      let taskinfo = {}
+      try {
+        let { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
+        taskinfo = await httpRequest({
+          url: baseUrl + "/api/v1/tasks/stop/"+task_id,
+          method: "post",
+          json: true,
+          headers: {},
+          body: {
+            "peer_nodes_list": [machine_id], 
+            "additional": {},
+            "nonce": nonce1,
+            "sign": sign1,
+            "wallet": walletinfo.wallet
+          }
+        })
+      } catch (err) {
+        taskinfo = {
+          message: err.message
+        }
+      }
+      if (taskinfo&&taskinfo.errcode == 0) {
+        // await virtualTask.deleteOne({_id: task_id})
+        response.json({
+          code: 10001,
+          msg: '停止成功',
+          success: true
+        })
+      }else {
+        response.json({
+          code: -2,
+          msg: taskinfo.message,
+          success: false
+        })
+      }
+    }else{
+      response.json({
+        code: -1,
+        msg:'参数不能为空',
+        success: false
+      })
+    }
+  } catch (error) {
+    response.json({
+      code: -10001,
+      msg:error.message,
+      success: false
+    })
+  } finally {
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
+  }
+})
+
+// 启动虚拟机
+rentVirtual.post('/startVir', urlEcode, async (request, response ,next) => {
+  let conn = null;
+  try {
+    const { id, task_id, machine_id } = request.body
+    if(id&&task_id) {
+      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      const getwallet = conn.db("identifier").collection("temporaryWallet")
+      const virtualTask = conn.db("identifier").collection("virtualTask")
+      let walletArr = await getwallet.find({_id: id}).toArray()
+      let walletinfo = walletArr[0]
+      let taskinfo = {}
+      try {
+        let { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
+        taskinfo = await httpRequest({
+          url: baseUrl + "/api/v1/tasks/start/"+task_id,
+          method: "post",
+          json: true,
+          headers: {},
+          body: {
+            "peer_nodes_list": [machine_id], 
+            "additional": {},
+            "nonce": nonce1,
+            "sign": sign1,
+            "wallet": walletinfo.wallet
+          }
+        })
+      } catch (err) {
+        taskinfo = {
+          message: err.message
+        }
+      }
+      if (taskinfo&&taskinfo.errcode == 0) {
+        // await virtualTask.deleteOne({_id: task_id})
+        response.json({
+          code: 10001,
+          msg: '启动成功',
           success: true
         })
       }else {
