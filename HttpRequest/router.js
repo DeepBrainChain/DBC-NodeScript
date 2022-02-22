@@ -6,6 +6,7 @@ import express from 'express'
 import { Select } from '../HttpRequest/auditRewardApi.js'
 import { getAuditList } from '../HttpRequest/auditListApi.js'
 import { rentVirtual } from '../HttpRequest/RentVirtualApi.js'
+import { Recharge } from '../HttpRequest/PaypalApi.js'
 // 定义serve
 const serve = express()
 // 设置serve请求头参数
@@ -33,6 +34,7 @@ serve.listen(8090, ()=>{
 serve.use('/api/select', Select)
 serve.use('/api/audit', getAuditList)
 serve.use('/api/rentMachine', rentVirtual)
+serve.use('/api/paypal', Recharge)
 //404判断
 serve.use(function (req, res) {
   res.send('404 not found');

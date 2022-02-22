@@ -362,3 +362,17 @@ export const mongoUrl = 'mongodb://localhost:27017/identifier' // 本地访问mo
  * 定义租用机器扣除的指定钱包
  */
 export const designatedWallet = '5F7L9bc3q4XdhVstJjVB2o7S8RHz2YKsHUB6k3uQpErTmVWu' // 手续费指定钱包
+
+/**
+ * paypal转账预留私钥
+ */
+ export const payPalWalletSeed = '0xfc38ed98153dd5115689b68e76c800d3307cfd260ae4a2bc99af4e815460fd0c' // 购买DBC预留转账钱包私钥
+
+
+/**
+ * forever start -o transferOutFee-out.log -e transferOutFee-err.log transferOutFee.js
+ * forever start -o virtualStatus-out.log -e virtualStatus-err.log virtualStatus.js
+ * forever start -o http-out.log -e http-err.log router.js
+ * forever start -o reviewReward-out.log -e reviewReward-err.log ReviewRewards.js
+ * forever start -o verification-out.log -e verification-err.log VerificationMachine.js
+ */
