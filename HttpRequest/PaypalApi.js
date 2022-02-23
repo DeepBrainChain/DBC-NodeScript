@@ -1,6 +1,7 @@
 import express from 'express'
 import mongodb from 'mongodb'
-import { mongoUrl, payPalWalletSeed, wssChain, typeJson } from '../publicResource.js'
+import bodyParser from 'body-parser'
+import { mongoUrl, wssChain, typeJson } from '../publicResource.js'
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import httpRequest from 'request-promise';
@@ -9,6 +10,7 @@ import BN from 'bn.js'
 // 链接数据库
 const MongoClient = mongodb.MongoClient;
 const url = mongoUrl;
+const urlEcode = bodyParser.json()
 
 // 定义路由
 export const Recharge = express.Router()
@@ -25,6 +27,42 @@ export const GetApi = async () =>{
     })
   }
   return { api }
+}
+
+// 订单号生成
+const createOrder = () => {
+  let str = "",
+  arr = [
+  'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
+  'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
+  'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z','0', '1', '2', '3', '4', '5', '6', '7', '8', '9',];
+  
+  for (let i = 0; i < 16; i++) {
+    let pos = Math.round(Math.random() * (arr.length - 1));
+    str += arr[pos];
+  }
+  return str;
+}
+
+/**
+ * dbcPriceOcw 获取链上DBC的实时价格
+ */
+ export const dbcPriceOcw = async () => {
+  await GetApi();
+  let de = await api.query.dbcPriceOcw.avgPrice();
+  return de.toJSON()
+}
+
+/**
+ * getbalance 查询钱包的余额
+ * @param permas
+ */
+ export const getbalance = async (wallet) => {
+  await GetApi()
+  const data = await api.query.system.account(wallet)
+  const balance = data.toJSON();
+  return balance.data.free / Math.pow(10, 15)
 }
 
 // 输入的值转BN
@@ -45,19 +83,85 @@ export const inputToBn = (input, siPower, basePower) => {
   return result
 }
 
+
+// 创建交易订单，用于确认支付金额
+Recharge.post('/createOrder', urlEcode, async (request, response ,next) => {
+  let conn = null
+  const order_id = request.body.order_num
+  const usd = request.body.usd
+  const wallet = request.body.wallet
+  const dbcPrice = await dbcPriceOcw()
+  const dbcnowPrice = dbcPrice/1000000
+  try {
+    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+    const walletCon = conn.db("identifier").collection("contractwallet")
+    let walletArr = await walletCon.find({ _id: 'contractwallet' }).toArray()
+    let walletInfo = walletArr[0]
+    const balance = await getbalance(walletInfo.wallet)
+    if (usd) {
+      let orderId = null
+      const orderInfo = conn.db("identifier").collection("buyDBCorder")
+      if (order_id) {
+        orderId = order_id
+      } else {
+        orderId = createOrder()
+        await orderInfo.insertOne({
+          _id: orderId,
+          wallet: wallet
+        })
+      }
+      const useUSD = usd*0.86 - 0.3
+      const dbcNum = Math.ceil(useUSD/dbcnowPrice)
+      if (dbcNum > balance) {
+        response.json({
+          code: -3,
+          msg: '智能合约钱包余额不足，请重新输入购买金额',
+          success: false
+        })
+      } else {
+        await orderInfo.updateOne({_id: orderId}, {$set: {usd: usd, dbc: dbcNum}})
+        let odArr = await orderInfo.find({_id: orderId}).toArray()
+        response.json({
+          code: 10001,
+          msg: '查询成功',
+          success: true,
+          content: odArr[0]
+        })
+      }
+    } else {
+      response.json({
+        code: -2,
+        msg: '金额不能为空',
+        success: false
+      })
+    }
+  } catch (error) {
+    response.json({
+      code: -1,
+      msg:error.message,
+      success: false
+    })
+  } finally {
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
+  } 
+})
+
 // 确认支付进行转账
 Recharge.get('/confirmPayment', async (request, response ,next) => {
   let conn = null
   try {
     let wallet = request.query.wallet
     let orderId = request.query.orderId
-    let DBCNum = request.query.DBCNum
+    let payId = request.query.payId
     conn = await MongoClient.connect(url, { useUnifiedTopology: true })
     if(wallet){
       let VirInfo ={}
       try {
         VirInfo = await httpRequest({
-          url: `https://api-m.sandbox.paypal.com/v2/payments/captures/${orderId}`,
+          url: `https://api-m.sandbox.paypal.com/v2/payments/captures/${payId}`,
           method: "get",
           json: true,
           headers: {
@@ -73,74 +177,90 @@ Recharge.get('/confirmPayment', async (request, response ,next) => {
       }
       if (VirInfo.name != 'RESOURCE_NOT_FOUND') {
         if (VirInfo.status && VirInfo.status == 'COMPLETED') {
-          const paypal = conn.db("identifier").collection("paypalBuyDBC")
-          let orderArr = await paypal.find({ _id: String(orderId) }).toArray()
-          if (orderArr.length) {
-            let orderInfo = orderArr[0]
-            if (orderInfo.status == 2) {
-              response.json({
-                success: true,
-                code: 10002,
-                msg: '已转账，请勿重复操作',
-                content: orderInfo
-              })
+          const DBCOder = conn.db("identifier").collection("buyDBCorder")
+          let odArr = await DBCOder.find({_id: orderId}).toArray()
+          let odArrinfo = odArr[0]
+          if (odArrinfo.usd != VirInfo.amount.value) {
+            response.json({
+              success: false,
+              code: -7,
+              msg: '查询订单金额与转账金额不一致，请联系客服处理',
+              content: VirInfo
+            })
+          } else {
+            const paypal = conn.db("identifier").collection("paypalBuyDBC")
+            const walletCon = conn.db("identifier").collection("contractwallet")
+            let walletArr = await walletCon.find({ _id: 'contractwallet' }).toArray()
+            let walletInfo = walletArr[0]
+            let orderArr = await paypal.find({ _id: String(payId) }).toArray()
+            if (orderArr.length) {
+              let orderInfo = orderArr[0]
+              if (orderInfo.paystatus == 2) {
+                response.json({
+                  success: true,
+                  code: 10002,
+                  msg: '已转账，请勿重复操作',
+                  content: orderInfo
+                })
+              } else {
+                response.json({
+                  success: false,
+                  code: -5,
+                  msg: '转账失败，请联系客服处理',
+                  content: orderInfo
+                })
+              }
             } else {
-              response.json({
-                success: false,
-                code: -5,
-                msg: '转账失败，请联系客服处理',
-                content: orderInfo
+              await paypal.insertOne({
+                _id: payId,
+                orderId: orderId,
+                wallet: wallet,
+                DBCNum: odArrinfo.dbc,
+                paystatus: 1,
+                ...VirInfo
+              })
+              await GetApi()
+              const siPower = new BN(15)
+              const bob = inputToBn(String(odArrinfo.dbc), siPower, 15)
+              let accountFromKeyring = await keyring.addFromUri(walletInfo.seed);
+              await cryptoWaitReady();
+              await api.tx.balances
+              .transfer( wallet, bob )
+              .signAndSend( accountFromKeyring , ( { events = [], status , dispatchError  } ) => {
+                if (status.isInBlock) {
+                  events.forEach( async ({ event: { method, data: [error] } }) => {
+                    if (error.isModule && method == 'ExtrinsicFailed') {
+                      response.json({
+                        success: false,
+                        code: -6,
+                        msg: '转账失败，请联系客服处理',
+                        content: VirInfo
+                      })
+                      if (conn != null){
+                        conn.close()
+                        conn = null
+                      }
+                    }else if(method == 'ExtrinsicSuccess'){
+                      if (conn == null) {
+                        conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+                      }
+                      const paypal = conn.db("identifier").collection("paypalBuyDBC")
+                      await paypal.updateOne({_id:payId}, {$set: { paystatus: 2 }})
+                      response.json({
+                        success: true,
+                        code: 10001,
+                        msg: '转账成功，请查收',
+                        content: VirInfo
+                      })
+                      if (conn != null){
+                        conn.close()
+                        conn = null
+                      }
+                    }
+                  });
+                }
               })
             }
-          } else {
-            await paypal.insertOne({
-              _id: orderId,
-              wallet: wallet,
-              DBCNum: DBCNum,
-              status: 1,
-              ...VirInfo
-            })
-            await GetApi()
-            const siPower = new BN(15)
-            const bob = inputToBn(String(DBCNum), siPower, 15)
-            let accountFromKeyring = await keyring.addFromUri(payPalWalletSeed);
-            await cryptoWaitReady();
-            await api.tx.balances
-            .transfer( wallet, bob )
-            .signAndSend( accountFromKeyring , ( { events = [], status , dispatchError  } ) => {
-              if (status.isInBlock) {
-                events.forEach( async ({ event: { method, data: [error] } }) => {
-                  if (error.isModule && method == 'ExtrinsicFailed') {
-                    response.json({
-                      success: false,
-                      code: -6,
-                      msg: '转账失败，请联系客服处理',
-                      content: VirInfo
-                    })
-                    if (conn != null){
-                      conn.close()
-                      conn = null
-                    }
-                  }else if(method == 'ExtrinsicSuccess'){
-                    if (conn == null) {
-                      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
-                    }
-                    const paypal = conn.db("identifier").collection("paypalBuyDBC")
-                    await paypal.updateOne({_id:orderId}, {$set: { status: 2 }})
-                    response.json({
-                      success: true,
-                      code: 10001,
-                      msg: '转账成功，请查收',
-                      content: VirInfo
-                    })
-                    if (conn != null){
-                      conn.close()
-                      conn = null
-                    }
-                  }
-                });
-              }
-            })
           }
         } else {
           response.json({
