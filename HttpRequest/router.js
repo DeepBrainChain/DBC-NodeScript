@@ -3,10 +3,10 @@
 //导入express模块
 import express from 'express'
 // 导入路由模块
-import { Select } from '../HttpRequest/auditRewardApi.js'
-import { getAuditList } from '../HttpRequest/auditListApi.js'
-import { rentVirtual } from '../HttpRequest/RentVirtualApi.js'
-import { Recharge } from '../HttpRequest/PaypalApi.js'
+import { Select } from './SelectApi.js'
+import { getAuditList } from './auditListApi.js'
+import { rentVirtual } from './RentVirtualApi.js'
+import { Recharge } from './PaypalApi.js'
 // 定义serve
 const serve = express()
 // 设置serve请求头参数
