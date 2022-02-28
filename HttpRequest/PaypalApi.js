@@ -1,7 +1,7 @@
 import express from 'express'
 import mongodb from 'mongodb'
 import bodyParser from 'body-parser'
-import { mongoUrl, wssChain, typeJson } from '../publicResource.js'
+import { mongoUrl, wssChain, typeJson, paypalUrl } from '../publicResource.js'
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import httpRequest from 'request-promise';
@@ -83,7 +83,6 @@ export const inputToBn = (input, siPower, basePower) => {
   return result
 }
 
-
 // 创建交易订单，用于确认支付金额
 Recharge.post('/createOrder', urlEcode, async (request, response ,next) => {
   let conn = null
@@ -157,16 +156,21 @@ Recharge.get('/confirmPayment', async (request, response ,next) => {
     let orderId = request.query.orderId
     let payId = request.query.payId
     conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+    const paypaldetails = await conn.db("identifier").collection("paypalInfo")
+    const paypalArr = await paypaldetails.find({ _id: 'paypal' }).toArray()
+    const paypalInfo = paypalArr[0]
+    const paypalauth = new Buffer.from(`${paypalInfo.Client_ID}:${paypalInfo.Secret}`)
+    const basicAuth = paypalauth.toString('base64')
     if(wallet){
       let VirInfo ={}
       try {
         VirInfo = await httpRequest({
-          url: `https://api-m.sandbox.paypal.com/v2/payments/captures/${payId}`,
+          url: paypalUrl+ `/v2/payments/captures/${payId}`,
           method: "get",
           json: true,
           headers: {
             "content-type": "application/json",
-            "Authorization": "Basic QVJqTXNsM3ZKYjRrXzUtczRNZlNSSHpZZ2c0dTJDRWRDS0dtTWQ2UTYxdWdYSnB3UzNwdXRMcF83TDNSck5ESm9feVRUU1Ffa19zV0tTMVA6RU5TSlhhQ05pREJLa1p2Q2hkODVZanYtU1JFQ2FKQXhnZEtKR3Y5bHFxbExXZ0tjWWFhbmFwRENBUnlFMzZUQU1XYkEyMXFaSEJ0NDZremQ="
+            "Authorization": `Basic ${basicAuth}`
           },
           body: {}
         })

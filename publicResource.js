@@ -442,6 +442,11 @@ export const mongoUrl = 'mongodb://localhost:27017/identifier' // 本地访问mo
 // export const mongoUrl = 'mongodb://d**:d********Y@localhost:27017/identifier' // 服务器访问mongo
 
 /**
+ * paypal访问域名
+ */
+ export const paypalUrl = 'https://api-m.sandbox.paypal.com' // 沙盒测试
+// export const paypalUrl = 'https://api-m.paypal.com' // 正式版本
+/**
  * 定义租用机器扣除的指定钱包
  */
 export const designatedWallet = '5F7L9bc3q4XdhVstJjVB2o7S8RHz2YKsHUB6k3uQpErTmVWu' // 手续费指定钱包
