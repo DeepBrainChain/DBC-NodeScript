@@ -91,6 +91,23 @@ const randomWord = () => {
   }
   return str;
 }
+
+// 获取 network_name 名称
+const getnetwork = () => {
+  let len = parseInt(Math.random()*7+4,10)
+  let str = "",
+  arr = [
+    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
+    'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
+    'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z','0', '1', '2', '3', '4', '5', '6', '7', '8', '9',];
+  for (let i = 0; i < len; i++) {
+    let pos = Math.round(Math.random() * (arr.length - 1));
+    str += arr[pos];
+  }
+  return str;
+}
+
 // 创建账户
 export const createAccountFromSeed = async () => {
   if (keyring) {
@@ -694,6 +711,89 @@ rentVirtual.post('/getMachineInfo', urlEcode, async (request, response ,next) =>
   }
 })
 
+// 创建网络
+rentVirtual.post('/createNetwork', urlEcode, async (request, response ,next) => {
+  let conn = null;
+  try {
+    const { wallet } = request.body
+    if(wallet) {
+      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      const searchName = conn.db("identifier").collection("networkname")
+      let nameArr = await searchName.find({_id: wallet}).toArray()
+      if (nameArr.length) {
+        let nameInfo = nameArr[0]
+        response.json({
+          code: 10001,
+          msg: '获取成功',
+          success: true,
+          content: nameInfo.network_name
+        })
+      } else {
+        let allLen = await searchName.find({}).toArray()
+        let network_name = await getnetwork();
+        let vxlan_vni = 1 + allLen
+        let VirInfo = {}
+        try {
+          VirInfo = await httpRequest({
+            url: baseUrl + "/api/v1/lan/create",
+            method: "post",
+            json: true,
+            headers: {},
+            body: {
+              "peer_nodes_list": [], 
+              "additional": {
+                "network_name": network_name,
+                "vxlan_vni": vxlan_vni,
+                "ip_cidr": "192.168.66.0/24"
+              }
+            }
+          })
+        } catch (err) {
+          VirInfo = {
+            message: err.message
+          }
+        }
+        if (VirInfo&&VirInfo.errcode == 0) {
+          await searchName.insertOne({
+            _id: wallet,
+            network_name: network_name,
+            vxlan_vni: vxlan_vni
+          })
+          response.json({
+            code: 10001,
+            msg: '获取成功',
+            success: true,
+            content: network_name
+          })
+        } else {
+          response.json({
+            code: -2,
+            msg: VirInfo.message,
+            success: false
+          })
+        }
+      }
+    }else{
+      response.json({
+        code: -1,
+        msg:'钱包地址不能为空',
+        success: false
+      })
+    }
+  } catch (error) {
+    response.json({
+      code: -10001,
+      msg:error.message,
+      success: false
+    })
+  } finally {
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
+  }
+})
+
 // 创建虚拟机
 rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => {
   let conn = null;
@@ -716,7 +816,8 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
       multicast,
       nonce, 
       sign, 
-      wallet 
+      wallet,
+      network_name
     } = request.body
     if(id&&machine_id&&nonce&&sign&&wallet) {
       let hasNonce = await Verify(nonce, sign, wallet)
@@ -752,6 +853,7 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
                   "operation_system": String(operation_system),
                   "bios_mode": String(bios_mode),
                   "multicast": JSON.parse(multicast),
+                  // "network_name": network_name,
                   "vm_xml": "",
                   "vm_xml_url": ""
                 },
@@ -1186,7 +1288,6 @@ rentVirtual.post('/stopVir', urlEcode, async (request, response ,next) => {
     if(id&&task_id) {
       conn = await MongoClient.connect(url, { useUnifiedTopology: true })
       const getwallet = conn.db("identifier").collection("temporaryWallet")
-      const virtualTask = conn.db("identifier").collection("virtualTask")
       let walletArr = await getwallet.find({_id: id}).toArray()
       let walletinfo = walletArr[0]
       let taskinfo = {}
@@ -1211,7 +1312,6 @@ rentVirtual.post('/stopVir', urlEcode, async (request, response ,next) => {
         }
       }
       if (taskinfo&&taskinfo.errcode == 0) {
-        // await virtualTask.deleteOne({_id: task_id})
         response.json({
           code: 10001,
           msg: '停止成功',
@@ -1253,7 +1353,6 @@ rentVirtual.post('/startVir', urlEcode, async (request, response ,next) => {
     if(id&&task_id) {
       conn = await MongoClient.connect(url, { useUnifiedTopology: true })
       const getwallet = conn.db("identifier").collection("temporaryWallet")
-      const virtualTask = conn.db("identifier").collection("virtualTask")
       let walletArr = await getwallet.find({_id: id}).toArray()
       let walletinfo = walletArr[0]
       let taskinfo = {}
@@ -1278,10 +1377,101 @@ rentVirtual.post('/startVir', urlEcode, async (request, response ,next) => {
         }
       }
       if (taskinfo&&taskinfo.errcode == 0) {
-        // await virtualTask.deleteOne({_id: task_id})
         response.json({
           code: 10001,
           msg: '启动成功',
+          success: true
+        })
+      }else {
+        response.json({
+          code: -2,
+          msg: taskinfo.message,
+          success: false
+        })
+      }
+    }else{
+      response.json({
+        code: -1,
+        msg:'参数不能为空',
+        success: false
+      })
+    }
+  } catch (error) {
+    response.json({
+      code: -10001,
+      msg:error.message,
+      success: false
+    })
+  } finally {
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
+  }
+})
+
+// 修改虚拟机
+rentVirtual.post('/editVir', urlEcode, async (request, response ,next) => {
+  let conn = null;
+  try {
+    const { 
+      id,
+      task_id, 
+      machine_id, 
+      new_ssh_port, 
+      new_vnc_port, 
+      new_rdp_port, 
+      port_min, 
+      port_max, 
+      new_gpu_count,
+      new_cpu_cores,
+      new_mem_size,
+      increase_disk_size} = request.body
+    if(id&&task_id) {
+      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      const getwallet = conn.db("identifier").collection("temporaryWallet")
+      let walletArr = await getwallet.find({_id: id}).toArray()
+      let walletinfo = walletArr[0]
+      let taskinfo = {}
+      try {
+        let { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
+        taskinfo = await httpRequest({
+          url: baseUrl + "/api/v1/tasks/modify/"+task_id,
+          method: "post",
+          json: true,
+          headers: {},
+          body: {
+            "peer_nodes_list": [machine_id], 
+            "additional": {
+              "new_ssh_port": String(new_ssh_port),
+              "new_vnc_port": String(new_vnc_port),
+              "new_rdp_port": String(new_rdp_port),
+              "new_custom_port": [`tcp,${port_min}-${port_max}`,`udp,${port_min}-${port_max}`],
+              "new_gpu_count": String(new_gpu_count),  // >= 0
+              "new_cpu_cores": String(new_cpu_cores),  // > 0, 单位G
+              "new_mem_size": String(new_mem_size),  // > 0, 单位G
+              "increase_disk_size": String(increase_disk_size) // > 0, 单位G
+            },
+            "nonce": nonce1,
+            "sign": sign1,
+            "wallet": walletinfo.wallet
+          }
+        })
+      } catch (err) {
+        taskinfo = {
+          message: err.message
+        }
+      }
+      if (taskinfo&&taskinfo.errcode == 0) {
+        const task = conn.db("identifier").collection("virtualTask")
+        await task.updateOne({_id: task_id}, {$set:{
+          port_min: port_min,
+          port_max: port_max,
+          rdp_port: new_rdp_port,
+        }})
+        response.json({
+          code: 10001,
+          msg: '修改成功',
           success: true
         })
       }else {

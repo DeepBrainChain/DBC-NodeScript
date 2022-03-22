@@ -180,7 +180,7 @@ Recharge.get('/confirmPayment', async (request, response ,next) => {
         }
       }
       if (VirInfo.name != 'RESOURCE_NOT_FOUND') {
-        if (VirInfo.status && VirInfo.status == 'COMPLETED') {
+        if (VirInfo.status && (VirInfo.status == 'COMPLETED' || VirInfo.status == 'PENDING')) {
           const DBCOder = conn.db("identifier").collection("buyDBCorder")
           let odArr = await DBCOder.find({_id: orderId}).toArray()
           let odArrinfo = odArr[0]
