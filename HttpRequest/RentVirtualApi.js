@@ -1435,6 +1435,18 @@ rentVirtual.post('/editVir', urlEcode, async (request, response ,next) => {
       let taskinfo = {}
       try {
         let { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
+        let perams = {
+          "new_ssh_port": String(new_ssh_port),
+          "new_vnc_port": String(new_vnc_port),
+          "new_rdp_port": String(new_rdp_port),
+          "new_custom_port": [`tcp,${port_min}-${port_max}`,`udp,${port_min}-${port_max}`],
+          "new_gpu_count": String(new_gpu_count),  // >= 0
+          "new_cpu_cores": String(new_cpu_cores),  // > 0, 单位G
+          "new_mem_size": String(new_mem_size),  // > 0, 单位G
+        }
+        if (increase_disk_size) {
+          perams.increase_disk_size = String(increase_disk_size)
+        }
         taskinfo = await httpRequest({
           url: baseUrl + "/api/v1/tasks/modify/"+task_id,
           method: "post",
@@ -1442,16 +1454,7 @@ rentVirtual.post('/editVir', urlEcode, async (request, response ,next) => {
           headers: {},
           body: {
             "peer_nodes_list": [machine_id], 
-            "additional": {
-              "new_ssh_port": String(new_ssh_port),
-              "new_vnc_port": String(new_vnc_port),
-              "new_rdp_port": String(new_rdp_port),
-              "new_custom_port": [`tcp,${port_min}-${port_max}`,`udp,${port_min}-${port_max}`],
-              "new_gpu_count": String(new_gpu_count),  // >= 0
-              "new_cpu_cores": String(new_cpu_cores),  // > 0, 单位G
-              "new_mem_size": String(new_mem_size),  // > 0, 单位G
-              "increase_disk_size": String(increase_disk_size) // > 0, 单位G
-            },
+            "additional": perams,
             "nonce": nonce1,
             "sign": sign1,
             "wallet": walletinfo.wallet
