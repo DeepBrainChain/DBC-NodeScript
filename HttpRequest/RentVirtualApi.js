@@ -455,6 +455,25 @@ rentVirtual.post('/getVirtual', urlEcode, async (request, response ,next) => {
     if(wallet) {
       const search = conn.db("identifier").collection("VirtualInfo")
       let orderArr = await search.find({wallet: wallet, orderStatus: {$in:[2, 3, 4, 5, 6]}}).sort({"createTime": -1}).toArray()
+      // let orderArr = await search.aggregate([
+      //   {
+      //     $match: {wallet: '5CkWErxCtUPWmQhmX3SXs5UckE7FNpzagHVESH4kiLbStoVK', orderStatus: {$in:[2, 3, 4, 5, 6]}}
+      //   },
+      //   {
+      //     $sort: { "createTime": -1 }
+      //   },
+      //   {
+      //     $lookup: {
+      //       from: "virtualTask",
+      //       localField: "_id",
+      //       foreignField: "belong",
+      //       as: "taskInfo"
+      //     }
+      //   },
+      //   {
+      //     $project:{'taskInfo':{'_id': 0,'login_password': 0, 'belong': 0, 'vnc_password': 0, 'multicast': 0, 'local_address': 0}}
+      //   }
+      // ]).toArray()
       response.json({
         success: true,
         code: 10001,
@@ -654,9 +673,11 @@ rentVirtual.post('/renewRent', urlEcode, async (request, response ,next) => {
 rentVirtual.post('/getMachineInfo', urlEcode, async (request, response ,next) => {
   let conn = null;
   try {
-    const { machine_id } = request.body
+    const { machine_id, id } = request.body
     if(machine_id) {
       conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      const search = conn.db("identifier").collection("virtualTask")
+      let orderArr = await search.find({belong: id}).project({_id: 0, ssh_port:1 ,rdp_port:1, vnc_port:1, port_max: 1, port_min: 1, status: 1}).toArray()
       let VirInfo = {}
       try {
         VirInfo = await httpRequest({
@@ -681,7 +702,10 @@ rentVirtual.post('/getMachineInfo', urlEcode, async (request, response ,next) =>
           code: 10001,
           msg: '获取成功',
           success: true,
-          content: VirInfo.message
+          content: {
+            taskInfo: orderArr,
+            info: VirInfo.message
+          }
         })
       } else {
         response.json({
