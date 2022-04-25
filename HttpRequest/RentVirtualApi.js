@@ -94,7 +94,7 @@ const randomWord = () => {
 
 // 获取 network_name 名称
 const getnetwork = () => {
-  let len = parseInt(Math.random()*7+4,10)
+  let len = parseInt(Math.random()*5+6,10)
   let str = "",
   arr = [
     'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
@@ -250,11 +250,13 @@ rentVirtual.post('/createVirOrder', urlEcode, async (request, response ,next) =>
         let errRefund = false
         let orderStatus = 0
         let createTime = 0
+        let searchHidden = false
         let searchOrder = await search.find({_id: id, orderStatus: {$in:[0, 4, 5]}}).toArray()
         if (searchOrder.length) {
           errRefund = searchOrder[0].errRefund ? searchOrder[0].errRefund : false
           orderStatus = searchOrder[0].orderStatus ? searchOrder[0].orderStatus : 0
           createTime = searchOrder[0].createTime ? searchOrder[0].createTime : 0
+          searchHidden = searchOrder[0].searchHidden ? searchOrder[0].searchHidden : false
           await search.deleteOne({_id: id})
         }
         let data = {...arrinfo, ...{
@@ -268,7 +270,8 @@ rentVirtual.post('/createVirOrder', urlEcode, async (request, response ,next) =>
           language,
           orderStatus,
           createTime,
-          errRefund
+          errRefund,
+          searchHidden
         }}
         await search.insertOne(data)
         response.json({
@@ -368,7 +371,7 @@ rentVirtual.post('/rentmachine', urlEcode, async (request, response ,next) => {
                 }
               })
             }else if(method == 'ExtrinsicSuccess'){
-              await search.updateOne({_id: id}, {$set:{orderStatus: 2, createTime: Date.now()}})
+              await search.updateOne({_id: id}, {$set:{orderStatus: 2, searchHidden: false, createTime: Date.now()}})
               response.json({
                 success: true,
                 code: 10001,
@@ -454,26 +457,7 @@ rentVirtual.post('/getVirtual', urlEcode, async (request, response ,next) => {
     conn = await MongoClient.connect(url, { useUnifiedTopology: true })
     if(wallet) {
       const search = conn.db("identifier").collection("VirtualInfo")
-      let orderArr = await search.find({wallet: wallet, orderStatus: {$in:[2, 3, 4, 5, 6]}}).sort({"createTime": -1}).toArray()
-      // let orderArr = await search.aggregate([
-      //   {
-      //     $match: {wallet: '5CkWErxCtUPWmQhmX3SXs5UckE7FNpzagHVESH4kiLbStoVK', orderStatus: {$in:[2, 3, 4, 5, 6]}}
-      //   },
-      //   {
-      //     $sort: { "createTime": -1 }
-      //   },
-      //   {
-      //     $lookup: {
-      //       from: "virtualTask",
-      //       localField: "_id",
-      //       foreignField: "belong",
-      //       as: "taskInfo"
-      //     }
-      //   },
-      //   {
-      //     $project:{'taskInfo':{'_id': 0,'login_password': 0, 'belong': 0, 'vnc_password': 0, 'multicast': 0, 'local_address': 0}}
-      //   }
-      // ]).toArray()
+      let orderArr = await search.find({wallet: wallet, orderStatus: {$in:[2, 3, 4, 5, 6]}, searchHidden: {$ne: true}}).sort({"createTime": -1}).toArray()
       response.json({
         success: true,
         code: 10001,
@@ -739,23 +723,25 @@ rentVirtual.post('/getMachineInfo', urlEcode, async (request, response ,next) =>
 rentVirtual.post('/createNetwork', urlEcode, async (request, response ,next) => {
   let conn = null;
   try {
-    const { wallet } = request.body
-    if(wallet) {
+    const { id } = request.body
+    if(id) {
       conn = await MongoClient.connect(url, { useUnifiedTopology: true })
-      const searchName = conn.db("identifier").collection("networkname")
-      let nameArr = await searchName.find({_id: wallet}).toArray()
-      if (nameArr.length) {
-        let nameInfo = nameArr[0]
+      const virtualInfo = conn.db("identifier").collection("VirtualInfo")
+      let orderArr = await virtualInfo.find({_id: id}).toArray()
+      let orderinfo = orderArr[0]
+      if (orderinfo.network_name != null && orderinfo.network_name != '') {
         response.json({
           code: 10001,
-          msg: '获取成功',
+          msg: '已存在网络名称',
           success: true,
-          content: nameInfo.network_name
+          content: orderinfo.network_name
         })
       } else {
-        let allLen = await searchName.find({}).toArray()
-        let network_name = await getnetwork();
-        let vxlan_vni = 1 + allLen
+        const getwallet = conn.db("identifier").collection("temporaryWallet")
+        let walletArr = await getwallet.find({_id: id}).toArray()
+        let walletinfo = walletArr[0]
+        let { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
+        let network_name = getnetwork();
         let VirInfo = {}
         try {
           VirInfo = await httpRequest({
@@ -764,12 +750,14 @@ rentVirtual.post('/createNetwork', urlEcode, async (request, response ,next) => 
             json: true,
             headers: {},
             body: {
-              "peer_nodes_list": [], 
+              "peer_nodes_list": [orderinfo.machine_id], 
               "additional": {
                 "network_name": network_name,
-                "vxlan_vni": vxlan_vni,
                 "ip_cidr": "192.168.66.0/24"
-              }
+              },
+              "nonce": nonce1,
+              "sign": sign1,
+              "wallet": walletinfo.wallet
             }
           })
         } catch (err) {
@@ -777,15 +765,20 @@ rentVirtual.post('/createNetwork', urlEcode, async (request, response ,next) => 
             message: err.message
           }
         }
+        if (VirInfo.errcode != undefined || VirInfo.errcode != null) {
+          VirInfo = VirInfo
+        } else {
+          if (orderinfo.machine_id.indexOf('CTC') != -1) {
+            VirInfo = VirInfo.netcongtu
+          } else {
+            VirInfo = VirInfo.mainnet
+          }
+        }
         if (VirInfo&&VirInfo.errcode == 0) {
-          await searchName.insertOne({
-            _id: wallet,
-            network_name: network_name,
-            vxlan_vni: vxlan_vni
-          })
+          await virtualInfo.updateOne({_id: id},{$set:{network_name: network_name}})
           response.json({
             code: 10001,
-            msg: '获取成功',
+            msg: '获取网络名称成功',
             success: true,
             content: network_name
           })
@@ -800,7 +793,7 @@ rentVirtual.post('/createNetwork', urlEcode, async (request, response ,next) => 
     }else{
       response.json({
         code: -1,
-        msg:'钱包地址不能为空',
+        msg:'参数不能为空',
         success: false
       })
     }
@@ -837,7 +830,6 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
       port_max,
       operation_system,
       bios_mode,
-      multicast,
       nonce, 
       sign, 
       wallet,
@@ -876,8 +868,8 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
                   "rdp_port": String(rdp_port),
                   "operation_system": String(operation_system),
                   "bios_mode": String(bios_mode),
-                  "multicast": JSON.parse(multicast),
-                  // "network_name": network_name,
+                  // "multicast": JSON.parse(multicast),
+                  "network_name": String(network_name?network_name:''),
                   "vm_xml": "",
                   "vm_xml_url": ""
                 },
@@ -900,7 +892,6 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
               port_min: port_min,
               port_max: port_max,
               rdp_port: rdp_port,
-              multicast: JSON.parse(multicast),
               ...VirInfo.message
             })
             response.json({

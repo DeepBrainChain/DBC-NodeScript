@@ -62,7 +62,7 @@ const checkVirtualStatus = async () => {
     let orderArr5 = await Info.find({orderStatus: 5}).toArray() // 查询订单中取消的订单
     for(let i = 0; i < orderArr1.length; i++){
       if (orderArr1[i].createTime + 30*60*1000 < Date.now()) {
-        await Info.updateOne({_id: orderArr1[i]._id}, {$set:{orderStatus: 6}})
+        await Info.updateOne({_id: orderArr1[i]._id}, {$set:{orderStatus: 6, network_name: ''}})
         await GetApi()
         let walletArr = await wallet.find({_id: orderArr1[i]._id}).toArray()
         let walletinfo = walletArr[0]
@@ -85,7 +85,7 @@ const checkVirtualStatus = async () => {
                   // virInfo1 = conn.db("identifier").collection("virtualTask")
                 }
                 // await virInfo1.deleteMany({ belong: orderArr1[i]._id })
-                await Info1.updateOne({_id: orderArr1[i]._id}, {$set:{orderStatus: 5}}) // 订单取消
+                await Info1.updateOne({_id: orderArr1[i]._id}, {$set:{orderStatus: 5, network_name: ''}}) // 订单取消
                 if (conn != null){
                   conn.close()
                   conn = null
@@ -100,7 +100,7 @@ const checkVirtualStatus = async () => {
       if (orderArr2[i].createTime + orderArr2[i].day*24*60*60*1000 < Date.now()) {
         // let info = await machinesInfo(orderArr2[i].machine_id)
         // if (Object.keys(info.machine_status)[0] == 'Online') {
-          await Info.updateOne({_id: orderArr2[i]._id}, {$set:{orderStatus: 4}}) // 订单结束
+          await Info.updateOne({_id: orderArr2[i]._id}, {$set:{orderStatus: 4, network_name: ''}}) // 订单结束
         // }
       }
     }
@@ -112,6 +112,9 @@ const checkVirtualStatus = async () => {
     }
     for(let i = 0; i < orderArr5.length; i++){ // 7天删除数据库中对应的取消订单虚拟机
       await virInfo.updateMany({ belong: orderArr5[i]._id }, {$set:{status: 'closed'}})
+      if ((orderArr5[i].createTime + 172800000) < Date.now() && !(orderArr5[i].searchHidden)) {
+        await Info.updateOne({_id: orderArr5[i]._id}, {$set:{ searchHidden: true }})
+      }
       if ((orderArr5[i].createTime + orderArr5[i].day*24*60*60*1000 + 604800000) < Date.now()) {
         await virInfo.deleteMany({ belong: orderArr5[i]._id })
       }
@@ -139,7 +142,7 @@ const checkVirtualStatus = async () => {
                 // virInfo1 = conn.db("identifier").collection("virtualTask")
               }
               // await virInfo1.deleteMany({ belong: orderArr4[i]._id })
-              await Info1.updateOne({_id: orderArr4[i]._id}, {$set:{orderStatus: 5}}) // 订单取消
+              await Info1.updateOne({_id: orderArr4[i]._id}, {$set:{orderStatus: 5, network_name: ''}}) // 订单取消
               if (conn != null){
                 conn.close()
                 conn = null
