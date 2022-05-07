@@ -3,7 +3,7 @@ import { hexToString } from '@polkadot/util';
 import mongodb from 'mongodb'
 import schedule from 'node-schedule'
 import httpRequest from 'request-promise';
-import { typeJson, CTtypeJson, wssChain, mongoUrl, baseUrl } from '../publicResource.js'
+import { typeJson, wssChain, mongoUrl, baseUrl } from '../publicResource.js'
 
 const MongoClient = mongodb.MongoClient;
 const url = mongoUrl;
@@ -15,7 +15,7 @@ export const GetApi = async () =>{
   if (!api) {
     const provider = new WsProvider(wssChain.dbc)
     api = await ApiPromise.create({ 
-      provider ,
+      provider,
       types: typeJson
     })
   }
@@ -33,6 +33,17 @@ export const GetApi2 = async () =>{
   return { congtuapi }
 }
 
+const getBlockTime = async (type) => {
+  let de = null;
+  if (type == 'congtu') {
+    await GetApi2();
+    de = await congtuapi.query.system.number();
+  } else {
+    await GetApi()
+    de = await api.query.system.number();
+  }
+  return de.toJSON();
+}
 
 /**
  * liveMachine 获取两条链上机器所有可用机器信息（online_machine， rented_machine， offline_machine）
@@ -43,10 +54,12 @@ export const GetApi2 = async () =>{
   await GetApi2()
   const machine = await api.query.onlineProfile.liveMachines()
   const machine2 = await congtuapi.query.onlineProfile.liveMachines()
-  // console.log(machine2, 'machine2');
   let list = [...machine.online_machine.toHuman(), ...machine.rented_machine.toHuman(), ...machine.offline_machine.toHuman()]
   let list2 = [...machine2.online_machine.toHuman(), ...machine2.rented_machine.toHuman(), ...machine2.offline_machine.toHuman()]
-  const newList = [...list, ...list2]
+  let list3 = list2.map(el => {
+    return 'CTC'+el
+  })
+  const newList = [...list, ...list3]
   return newList
 }
 
@@ -56,14 +69,20 @@ export const GetApi2 = async () =>{
  */
  export const machineInfo = async (machineId) => {
   let info = null
-  if (machineId.indexOf('CTCCTC') != -1) {
+  if (machineId.indexOf('CTC') != -1) {
     await GetApi2()
-    info = await congtuapi.query.onlineProfile.machinesInfo(machineId)
+    let id = machineId.slice(3)
+    info = await congtuapi.query.onlineProfile.machinesInfo(id)
+    info = info.toJSON()
+    info.original_id = id
+    info.machine_id = machineId
   } else {
     await GetApi()
     info = await api.query.onlineProfile.machinesInfo(machineId)
+    info = info.toJSON()
+    info.original_id = machineId
   }
-  return info.toJSON()
+  return info
 }
 
 function flatObject(target) {
@@ -86,13 +105,26 @@ function flatObject(target) {
   return result;
 }
 
+function getArrEqual(arr1, arr2) {
+  let newArr = arr1.filter(item => !(arr2.some(value => value == item)))
+  return newArr;
+}
+
 const getMachine = async () => {
   try {
     let list = await liveMachine()
     if (list.length) {
       conn = await MongoClient.connect(url, { useUnifiedTopology: true })
-      const machineConn = conn.db("identifier").collection("machineInfo")
+      const machineConn = conn.db("identifier").collection("CT_machineInfo")
       let machineArr_add = []
+      let hasMachine = await machineConn.aggregate([{$group:{_id: '$machine_id'}}]).toArray()
+      let machineArr_has = hasMachine.map(el => {
+        return el._id
+      })
+      let newMachineArr = getArrEqual(machineArr_has, list)
+      for (let k = 0; k< newMachineArr.length; k++) {
+        await machineConn.deleteOne({_id: newMachineArr[k]})
+      }
       for(let i = 0; i < list.length; i++){
         let VirInfo = {}
         if (list[i] != '') {
@@ -149,26 +181,94 @@ const getMachine = async () => {
     }
   }
 }
-getMachine();
+const getvirMachine = async () => {
+  // 获取添加到租用虚拟机的机器
+  try {
+    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+    const virMachine = conn.db("identifier").collection("virMachine")
+    const test = conn.db("identifier").collection("machineInfo")
+    const virMacInfo = conn.db("identifier").collection("virMachineInfo")
+    const virArr = await virMachine.find({'_id': 'virtual_machine_list'}).toArray()
+    const vir_machinelist = virArr[0].machineList
+    if (vir_machinelist.length) {
+      for (let i= 0; i< vir_machinelist.length; i++) {
+        let block = await getBlockTime('chain')
+        const EndTime = Math.floor((vir_machinelist[i].rent_end - block)/2/60)
+        let virinfo = await virMacInfo.find({_id: vir_machinelist[i].machine_id}).toArray()
+        let infoArr = await test.find({ _id: vir_machinelist[i].machine_id }).project({ _id: 0 }).toArray()
+        if (virinfo.length) {
+          let gpuNum = {}
+          let canuseGpu = 0
+          try {
+            gpuNum = await httpRequest({
+              url: baseUrl + "/api/v1/mining_nodes",
+              method: "post",
+              json: true,
+              headers: {},
+              body: {
+                "peer_nodes_list": [vir_machinelist[i].machine_id], 
+                "additional": {
+                  
+                }
+              }
+            })
+          } catch (err) {
+            gpuNum = {
+              message: err.message
+            }
+          }
+          if (gpuNum&&gpuNum.errcode == 0) {
+            let getgpu = gpuNum.message.gpu
+            canuseGpu = getgpu.gpu_count - getgpu.gpu_used
+          } else {
+            canuseGpu = virinfo[0].canuseGpu
+          }
+          await virMacInfo.updateOne({ _id: vir_machinelist[i].machine_id }, { $set: { EndTime: EndTime, canuseGpu: canuseGpu, ...vir_machinelist[i], ...infoArr[0] }})
+        } else {
+          await virMacInfo.insertOne({
+            _id: vir_machinelist[i].machine_id,
+            canuseGpu: infoArr[0].gpu_num,
+            ...vir_machinelist[i],
+            EndTime: EndTime, 
+            ...infoArr[0]
+          })
+        }
+      }
+    }
+    
+  } catch (error) {
+    console.log(error, 'getvirMachine')
+  } finally {
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
+  }
+}
+
+// getMachine();
+getvirMachine();
 
 export const scheduleCronstyle = () => {
-  schedule.scheduleJob('00 50 * * * *',function(){
-    getMachine();
-  });
-  schedule.scheduleJob('00 40 * * * *',function(){
-    getMachine();
-  });
+  // schedule.scheduleJob('00 50 * * * *',function(){
+  //   getMachine();
+  // });
+  // schedule.scheduleJob('00 40 * * * *',function(){
+  //   getMachine();
+  // });
   schedule.scheduleJob('00 30 * * * *',function(){
-    getMachine();
+    // getMachine();
+    getvirMachine();
   });
-  schedule.scheduleJob('00 20 * * * *',function(){
-    getMachine();
-  });
-  schedule.scheduleJob('00 10 * * * *',function(){
-    getMachine();
-  });
+  // schedule.scheduleJob('00 20 * * * *',function(){
+  //   getMachine();
+  // });
+  // schedule.scheduleJob('00 10 * * * *',function(){
+  //   getMachine();
+  // });
   schedule.scheduleJob('00 01 * * * *',function(){
-    getMachine();
+    // getMachine();
+    getvirMachine();
   });
 }
 

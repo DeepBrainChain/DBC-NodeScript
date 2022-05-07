@@ -432,7 +432,7 @@ export const wssChain = {
  */
 // export const baseUrl = 'http://115.231.234.37:5052' // 聪图云私链端口
 // export const baseUrl = 'http://115.231.234.32:5052' // 主网测试端口
-export const baseUrl = 'http://14.152.85.57:5033' // 主网测试端口 -- 备用
+export const baseUrl = 'http://119.145.254.119:5034' // 综合端口号
 // export const baseUrl = 'http://115.231.234.34:5052' // 主网端口
 
 /**

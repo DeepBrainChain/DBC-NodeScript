@@ -54,8 +54,11 @@ const checkWalletFee = async () => {
   try {
     conn = await MongoClient.connect(url, { useUnifiedTopology: true })
     const Info = conn.db("identifier").collection("VirtualInfo")
+    const OrderInfo = conn.db("identifier").collection("virOrderInfo")
     const wallet = conn.db("identifier").collection("temporaryWallet")
+    const wallet1 = conn.db("identifier").collection("SignleTemporaryWallet")
     let orderArr1 = await Info.find({orderStatus: 3}).toArray() // 查询订单中正在使用中的订单
+    let orderArr2 = await OrderInfo.find({orderStatus: 3}).toArray() // 查询虚拟机订单中正在使用中的订单
     for(let i = 0; i < orderArr1.length; i++){
       let walletArr = await wallet.find({_id: orderArr1[i]._id}).toArray()
       let walletinfo = walletArr[0]
@@ -82,6 +85,32 @@ const checkWalletFee = async () => {
         })
       }
     }
+    // for(let i = 0; i < orderArr2.length; i++){
+    //   let walletArr = await wallet.find({_id: orderArr2[i].belong+orderArr2[i].account}).toArray()
+    //   let walletinfo = walletArr[0]
+    //   let balance  = await getbalance(walletinfo.wallet)
+    //   if( balance > 0.1 ) {
+    //     await GetApi()
+    //     let accountFromKeyring = await keyring.addFromUri(walletinfo.seed);
+    //     const siPower = new BN(15)
+    //     const bob = inputToBn(String(orderArr2[i].dbc-0.1), siPower, 15)
+    //     await cryptoWaitReady();
+    //     await api.tx.balances
+    //     .transfer( designatedWallet, bob )
+    //     .signAndSend( accountFromKeyring , ( { events = [], status , dispatchError  } ) => {
+    //       if (status.isInBlock) {
+    //         events.forEach( async ({ event: { method, data: [error] } }) => {
+    //           if(method == 'ExtrinsicSuccess'){
+    //             if (conn != null){
+    //               conn.close()
+    //               conn = null
+    //             }
+    //           }
+    //         });
+    //       }
+    //     })
+    //   }
+    // }
   } catch (err) {
     console.log(err, 'transferOutfee')
   } finally {
