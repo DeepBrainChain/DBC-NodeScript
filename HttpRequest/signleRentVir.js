@@ -278,7 +278,7 @@ signleRentVir.post('/createSignleVirOrder', urlEcode, async (request, response ,
           success: false,
           code: -8,
           msg: `总剩余时长不能超过${orderinfo.EndTime}小时`,
-          content: id
+          content: machine_id
         })
         return
       }
@@ -300,7 +300,7 @@ signleRentVir.post('/createSignleVirOrder', urlEcode, async (request, response ,
           success: false,
           code: -7,
           msg: '转账金额与实际金额不符，请确认是否有误',
-          content: id
+          content: machine_id
         })
         return
       }
@@ -490,6 +490,7 @@ signleRentVir.post('/changeSignleVirStatus', urlEcode, async (request, response 
     if(id&&machine_id&&account&&status) {
       // 查询虚拟机订单信息
       const VirOrder = conn.db("identifier").collection("virOrderInfo")
+      const MacInfo = conn.db("identifier").collection("virMachineInfo")
       if (status === 6) {
         await VirOrder.updateOne({_id: id}, { $set: {orderStatus: 6, ErrorTime: Date.now()}})
         response.json({
@@ -501,17 +502,19 @@ signleRentVir.post('/changeSignleVirStatus', urlEcode, async (request, response 
         return
       }
       if (status === 4) {
+        const MacArr = await MacInfo.find({_id: machine_id}).toArray()
+        const MacArrInfo = MacArr[0]
+        const VirOrderArr = await VirOrder.find({_id: id}).toArray()
+        const VirOrderArrInfo = VirOrderArr[0]
         await VirOrder.updateOne({_id: id}, {$set: {orderStatus: 4, searchHidden: true, ErrorTime: Date.now()}})
+        await MacInfo.updateOne({_id: machine_id}, {$set:{canuseGpu: MacArrInfo.canuseGpu + VirOrderArrInfo.gpu_count}})
         response.json({
           success: false,
           code: -4,
           msg: '转账失败，创建失败',
           content: id
         })
-        if (conn != null){
-          conn.close()
-          conn = null
-        }
+        return
       }
       if (status === 2) {
         await VirOrder.updateOne({_id: id}, {$set: {orderStatus: 3, startTime: + new Date()}})
@@ -521,6 +524,7 @@ signleRentVir.post('/changeSignleVirStatus', urlEcode, async (request, response 
           msg: '转账成功，开始使用',
           content: id
         })
+        return
       }
     }else{
       response.json({

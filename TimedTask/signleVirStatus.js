@@ -177,7 +177,7 @@ const checkVirtualStatus = async () => {
           }
           if (taskinfo&&taskinfo.errcode == 0) {
             await OrderInfo.updateOne({_id: orderArr3[i]._id}, {$set:{status: 'closed'}})
-            await MacInfo.updateOne({_id: orderArr3[i].belong}, {$set:{canuseGpu: MacArrInfo.canuseGpu + orderArr3[i].gpu_count}})
+            // await MacInfo.updateOne({_id: orderArr3[i].belong}, {$set:{canuseGpu: MacArrInfo.canuseGpu + orderArr3[i].gpu_count}})
           }
         }
       }
