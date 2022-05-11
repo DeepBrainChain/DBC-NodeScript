@@ -681,6 +681,19 @@ rentVirtual.post('/getMachineInfo', urlEcode, async (request, response ,next) =>
           message: err.message
         }
       }
+      if (VirInfo.errcode != undefined || VirInfo.errcode != null) {
+        VirInfo = VirInfo
+      } else {
+        if (VirInfo.netcongtu || VirInfo.mainnet) {
+          if (machine_id.indexOf('CTC') != -1) {
+            VirInfo = VirInfo.netcongtu
+          } else {
+            VirInfo = VirInfo.mainnet
+          }
+        } else {
+          VirInfo = VirInfo
+        }
+      }
       if (VirInfo&&VirInfo.errcode == 0) {
         response.json({
           code: 10001,
@@ -768,10 +781,14 @@ rentVirtual.post('/createNetwork', urlEcode, async (request, response ,next) => 
         if (VirInfo.errcode != undefined || VirInfo.errcode != null) {
           VirInfo = VirInfo
         } else {
-          if (orderinfo.machine_id.indexOf('CTC') != -1) {
-            VirInfo = VirInfo.netcongtu
+          if (VirInfo.netcongtu || VirInfo.mainnet) {
+            if (orderinfo.machine_id.indexOf('CTC') != -1) {
+              VirInfo = VirInfo.netcongtu
+            } else {
+              VirInfo = VirInfo.mainnet
+            }
           } else {
-            VirInfo = VirInfo.mainnet
+            VirInfo = VirInfo
           }
         }
         if (VirInfo&&VirInfo.errcode == 0) {
@@ -881,6 +898,19 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
           } catch (err) {
             VirInfo = {
               message: err.message
+            }
+          }
+          if (VirInfo.errcode != undefined || VirInfo.errcode != null) {
+            VirInfo = VirInfo
+          } else {
+            if (VirInfo.netcongtu || VirInfo.mainnet) {
+              if (machine_id.indexOf('CTC') != -1) {
+                VirInfo = VirInfo.netcongtu
+              } else {
+                VirInfo = VirInfo.mainnet
+              }
+            } else {
+              VirInfo = VirInfo
             }
           }
           if (VirInfo&&VirInfo.errcode == 0) {
@@ -1003,6 +1033,19 @@ rentVirtual.post('/timedQueryTask', urlEcode, async (request, response ,next) =>
             message: err.message
           }
         }
+        if (newsession.errcode != undefined || newsession.errcode != null) {
+          newsession = newsession
+        } else {
+          if (newsession.netcongtu || newsession.mainnet) {
+            if (machine_id.indexOf('CTC') != -1) {
+              newsession = newsession.netcongtu
+            } else {
+              newsession = newsession.mainnet
+            }
+          } else {
+            newsession = newsession
+          }
+        }
         if (newsession&&newsession.errcode == 0) {
           let { nonce: nonce1, signature: sign1 } = await CreateSignature1(walletinfo.seed, newsession.message.session_id)
           await getSession.insertOne({
@@ -1028,6 +1071,19 @@ rentVirtual.post('/timedQueryTask', urlEcode, async (request, response ,next) =>
               message: err.message
             }
           }
+        }
+      }
+      if (VirInfo.errcode != undefined || VirInfo.errcode != null) {
+        VirInfo = VirInfo
+      } else {
+        if (VirInfo.netcongtu || VirInfo.mainnet) {
+          if (machine_id.indexOf('CTC') != -1) {
+            VirInfo = VirInfo.netcongtu
+          } else {
+            VirInfo = VirInfo.mainnet
+          }
+        } else {
+          VirInfo = VirInfo
         }
       }
       if (VirInfo && VirInfo.errcode == 0) {
@@ -1106,6 +1162,19 @@ rentVirtual.post('/getVirTask', urlEcode, async (request, response ,next) => {
             } catch (err) {
               taskinfo = {
                 message: err.message
+              }
+            }
+            if (taskinfo.errcode != undefined || taskinfo.errcode != null) {
+              taskinfo = taskinfo
+            } else {
+              if (taskinfo.netcongtu || taskinfo.mainnet) {
+                if (machine_id.indexOf('CTC') != -1) {
+                  taskinfo = taskinfo.netcongtu
+                } else {
+                  taskinfo = taskinfo.mainnet
+                }
+              } else {
+                taskinfo = taskinfo
               }
             }
             if (taskinfo&&taskinfo.errcode == 0) {
@@ -1187,6 +1256,19 @@ rentVirtual.post('/restartVir', urlEcode, async (request, response ,next) => {
           message: err.message
         }
       }
+      if (taskinfo.errcode != undefined || taskinfo.errcode != null) {
+        taskinfo = taskinfo
+      } else {
+        if (taskinfo.netcongtu || taskinfo.mainnet) {
+          if (machine_id.indexOf('CTC') != -1) {
+            taskinfo = taskinfo.netcongtu
+          } else {
+            taskinfo = taskinfo.mainnet
+          }
+        } else {
+          taskinfo = taskinfo
+        }
+      }
       if (taskinfo&&taskinfo.errcode == 0) {
         response.json({
           code: 10001,
@@ -1251,6 +1333,19 @@ rentVirtual.post('/deleteVir', urlEcode, async (request, response ,next) => {
       } catch (err) {
         taskinfo = {
           message: err.message
+        }
+      }
+      if (taskinfo.errcode != undefined || taskinfo.errcode != null) {
+        taskinfo = taskinfo
+      } else {
+        if (taskinfo.netcongtu || taskinfo.mainnet) {
+          if (machine_id.indexOf('CTC') != -1) {
+            taskinfo = taskinfo.netcongtu
+          } else {
+            taskinfo = taskinfo.mainnet
+          }
+        } else {
+          taskinfo = taskinfo
         }
       }
       if (taskinfo&&taskinfo.errcode == 0) {
@@ -1326,6 +1421,19 @@ rentVirtual.post('/stopVir', urlEcode, async (request, response ,next) => {
           message: err.message
         }
       }
+      if (taskinfo.errcode != undefined || taskinfo.errcode != null) {
+        taskinfo = taskinfo
+      } else {
+        if (taskinfo.netcongtu || taskinfo.mainnet) {
+          if (machine_id.indexOf('CTC') != -1) {
+            taskinfo = taskinfo.netcongtu
+          } else {
+            taskinfo = taskinfo.mainnet
+          }
+        } else {
+          taskinfo = taskinfo
+        }
+      }
       if (taskinfo&&taskinfo.errcode == 0) {
         response.json({
           code: 10001,
@@ -1389,6 +1497,19 @@ rentVirtual.post('/startVir', urlEcode, async (request, response ,next) => {
       } catch (err) {
         taskinfo = {
           message: err.message
+        }
+      }
+      if (taskinfo.errcode != undefined || taskinfo.errcode != null) {
+        taskinfo = taskinfo
+      } else {
+        if (taskinfo.netcongtu || taskinfo.mainnet) {
+          if (machine_id.indexOf('CTC') != -1) {
+            taskinfo = taskinfo.netcongtu
+          } else {
+            taskinfo = taskinfo.mainnet
+          }
+        } else {
+          taskinfo = taskinfo
         }
       }
       if (taskinfo&&taskinfo.errcode == 0) {
@@ -1478,6 +1599,113 @@ rentVirtual.post('/editVir', urlEcode, async (request, response ,next) => {
       } catch (err) {
         taskinfo = {
           message: err.message
+        }
+      }
+      if (taskinfo.errcode != undefined || taskinfo.errcode != null) {
+        taskinfo = taskinfo
+      } else {
+        if (taskinfo.netcongtu || taskinfo.mainnet) {
+          if (machine_id.indexOf('CTC') != -1) {
+            taskinfo = taskinfo.netcongtu
+          } else {
+            taskinfo = taskinfo.mainnet
+          }
+        } else {
+          taskinfo = taskinfo
+        }
+      }
+      if (taskinfo&&taskinfo.errcode == 0) {
+        const task = conn.db("identifier").collection("virtualTask")
+        await task.updateOne({_id: task_id}, {$set:{
+          port_min: port_min,
+          port_max: port_max,
+          rdp_port: new_rdp_port,
+        }})
+        response.json({
+          code: 10001,
+          msg: '修改成功',
+          success: true
+        })
+      }else {
+        response.json({
+          code: -2,
+          msg: taskinfo.message,
+          success: false
+        })
+      }
+    }else{
+      response.json({
+        code: -1,
+        msg:'参数不能为空',
+        success: false
+      })
+    }
+  } catch (error) {
+    response.json({
+      code: -10001,
+      msg:error.message,
+      success: false
+    })
+  } finally {
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
+  }
+})
+
+// 修改密码
+rentVirtual.post('/editpasswd', urlEcode, async (request, response ,next) => {
+  let conn = null;
+  try {
+    const { 
+      id,
+      task_id, 
+      machine_id, 
+      username, 
+      password
+    } = request.body
+    if(id&&task_id) {
+      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      const getwallet = conn.db("identifier").collection("temporaryWallet")
+      let walletArr = await getwallet.find({_id: id}).toArray()
+      let walletinfo = walletArr[0]
+      let taskinfo = {}
+      try {
+        let { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
+        let perams = {
+          "username": String(username),
+          "password": String(password)
+        }
+        taskinfo = await httpRequest({
+          url: baseUrl + "/api/v1/tasks/passwd/"+task_id,
+          method: "post",
+          json: true,
+          headers: {},
+          body: {
+            "peer_nodes_list": [machine_id], 
+            "additional": perams,
+            "nonce": nonce1,
+            "sign": sign1,
+            "wallet": walletinfo.wallet
+          }
+        })
+      } catch (err) {
+        taskinfo = {
+          message: err.message
+        }
+      }
+      if (taskinfo.errcode != undefined || taskinfo.errcode != null) {
+        taskinfo = taskinfo
+      } else {
+        if (taskinfo.netcongtu || taskinfo.mainnet) {
+          if (machine_id.indexOf('CTC') != -1) {
+            taskinfo = taskinfo.netcongtu
+          } else {
+            taskinfo = taskinfo.mainnet
+          }
+        } else {
+          taskinfo = taskinfo
         }
       }
       if (taskinfo&&taskinfo.errcode == 0) {

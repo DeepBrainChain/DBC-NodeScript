@@ -175,4 +175,4 @@ export const scheduleCronstyle = () => {
   });
 }
 
-// scheduleCronstyle();
+scheduleCronstyle();
