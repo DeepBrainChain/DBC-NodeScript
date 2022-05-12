@@ -886,9 +886,7 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
                   "operation_system": String(operation_system),
                   "bios_mode": String(bios_mode),
                   // "multicast": JSON.parse(multicast),
-                  "network_name": String(network_name?network_name:''),
-                  "vm_xml": "",
-                  "vm_xml_url": ""
+                  "network_name": String(network_name?network_name:'')
                 },
                 "nonce": nonce1,
                 "sign": sign1,
@@ -1709,12 +1707,6 @@ rentVirtual.post('/editpasswd', urlEcode, async (request, response ,next) => {
         }
       }
       if (taskinfo&&taskinfo.errcode == 0) {
-        const task = conn.db("identifier").collection("virtualTask")
-        await task.updateOne({_id: task_id}, {$set:{
-          port_min: port_min,
-          port_max: port_max,
-          rdp_port: new_rdp_port,
-        }})
         response.json({
           code: 10001,
           msg: '修改成功',
