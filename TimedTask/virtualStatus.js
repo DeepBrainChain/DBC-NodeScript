@@ -1,10 +1,12 @@
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import mongodb from 'mongodb'
 import schedule from 'node-schedule'
-import { typeJson, wssChain, mongoUrl } from '../publicResource.js'
+import { typeJson, wssChain, mongoUrlSeed } from '../publicResource.js'
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import { BN_TEN } from '@polkadot/util';
 import BN from 'bn.js'
+import { decryptByAes256 } from '../testscript/crypto.js'
+const mongoUrl = decryptByAes256(mongoUrlSeed)
 const MongoClient = mongodb.MongoClient;
 const url = mongoUrl;
 let api  = null
@@ -55,6 +57,7 @@ const checkVirtualStatus = async () => {
     const Info = conn.db("identifier").collection("VirtualInfo")
     const wallet = conn.db("identifier").collection("temporaryWallet")
     const virInfo = conn.db("identifier").collection("virtualTask")
+    const security = conn.db("identifier").collection("securityGroup")
     let orderArr1 = await Info.find({orderStatus: 2}).toArray() // 查询订单中待确认租用的订单
     let orderArr2 = await Info.find({orderStatus: 3}).toArray() // 查询订单中正在使用中的订单
     let orderArr3 = await Info.find({orderStatus: 4}).toArray() // 查询订单中结束的订单
@@ -78,17 +81,16 @@ const checkVirtualStatus = async () => {
               console.log(method, 'orderStatus: 2');
               if(method == 'ExtrinsicSuccess'){
                 let Info1 = null
+                let conn1 = null
                 // let virInfo1 = null
-                if (conn == null) {
-                  conn = await MongoClient.connect(url, { useUnifiedTopology: true })
-                  Info1 = conn.db("identifier").collection("VirtualInfo")
+                conn1 = await MongoClient.connect(url, { useUnifiedTopology: true })
+                Info1 = conn1.db("identifier").collection("VirtualInfo")
                   // virInfo1 = conn.db("identifier").collection("virtualTask")
-                }
                 // await virInfo1.deleteMany({ belong: orderArr1[i]._id })
                 await Info1.updateOne({_id: orderArr1[i]._id}, {$set:{orderStatus: 5, network_name: ''}}) // 订单取消
-                if (conn != null){
-                  conn.close()
-                  conn = null
+                if (conn1 != null){
+                  conn1.close()
+                  conn1 = null
                 }
               }
             });
@@ -104,18 +106,32 @@ const checkVirtualStatus = async () => {
         // }
       }
     }
-    for(let i = 0; i < orderArr3.length; i++){ // 7天删除数据库中对应的结束订单虚拟机
+    for(let i = 0; i < orderArr3.length; i++){ // 9天删除数据库中对应的结束订单虚拟机
       await virInfo.updateMany({ belong: orderArr3[i]._id }, {$set:{status: 'closed'}})
-      if ((orderArr3[i].createTime + orderArr3[i].day*24*60*60*1000 + 604800000) < Date.now()) {
+      if ((orderArr3[i].createTime + orderArr3[i].day*24*60*60*1000 + 777600000) < Date.now()) {
+        let virArr = await virInfo.find({ belong: orderArr3[i]._id }).toArray()
+        for (let j = 0; j < virArr.length; j++) {
+          let SGarr1 = await security.find({_id: virArr[j].network_Id}).toArray()
+          if (SGarr1.length) {
+            await security.updateOne({_id: virArr[j].network_Id}, {$set: {bindVM: SGarr1[0].bindVM - 1}})
+          }
+        }
         await virInfo.deleteMany({ belong: orderArr3[i]._id })
       }
     }
-    for(let i = 0; i < orderArr5.length; i++){ // 7天删除数据库中对应的取消订单虚拟机
+    for(let i = 0; i < orderArr5.length; i++){ // 9天删除数据库中对应的取消订单虚拟机
       await virInfo.updateMany({ belong: orderArr5[i]._id }, {$set:{status: 'closed'}})
       if ((orderArr5[i].createTime + 172800000) < Date.now() && !(orderArr5[i].searchHidden)) {
+        let virArr = await virInfo.find({ belong: orderArr5[i]._id }).toArray()
+        for (let j = 0; j < virArr.length; j++) {
+          let SGarr1 = await security.find({_id: virArr[j].network_Id}).toArray()
+          if (SGarr1.length) {
+            await security.updateOne({_id: virArr[j].network_Id}, {$set: {bindVM: SGarr1[0].bindVM - 1}})
+          }
+        }
         await Info.updateOne({_id: orderArr5[i]._id}, {$set:{ searchHidden: true }})
       }
-      if ((orderArr5[i].createTime + orderArr5[i].day*24*60*60*1000 + 604800000) < Date.now()) {
+      if ((orderArr5[i].createTime + orderArr5[i].day*24*60*60*1000 + 777600000) < Date.now()) {
         await virInfo.deleteMany({ belong: orderArr5[i]._id })
       }
     }
@@ -135,17 +151,13 @@ const checkVirtualStatus = async () => {
             console.log(method, 'orderStatus: 6');
             if(method == 'ExtrinsicSuccess'){
               let Info1 = null
-              // let virInfo1 = null
-              if (conn == null) {
-                conn = await MongoClient.connect(url, { useUnifiedTopology: true })
-                Info1 = conn.db("identifier").collection("VirtualInfo")
-                // virInfo1 = conn.db("identifier").collection("virtualTask")
-              }
-              // await virInfo1.deleteMany({ belong: orderArr4[i]._id })
+              let conn1 = null
+              conn1 = await MongoClient.connect(url, { useUnifiedTopology: true })
+              Info1 = conn1.db("identifier").collection("VirtualInfo")
               await Info1.updateOne({_id: orderArr4[i]._id}, {$set:{orderStatus: 5, network_name: ''}}) // 订单取消
-              if (conn != null){
-                conn.close()
-                conn = null
+              if (conn1 != null){
+                conn1.close()
+                conn1 = null
               }
             }
           });

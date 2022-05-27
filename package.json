@@ -12,6 +12,7 @@
     "@substrate/txwrapper": "^7.0.0",
     "body-parser": "^1.19.1",
     "cowsay": "^1.5.0",
+    "crypto": "^1.0.1",
     "express": "^4.17.1",
     "inquirer": "^8.1.5",
     "minimist": "^1.2.5",

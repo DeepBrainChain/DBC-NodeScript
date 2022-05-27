@@ -1,12 +1,14 @@
 import express from 'express'
 import mongodb from 'mongodb'
 import bodyParser from 'body-parser'
-import { typeJson, wssChain, mongoUrl, baseUrl } from '../publicResource.js'
+import { typeJson, wssChain, mongoUrlSeed, baseUrl } from '../publicResource.js'
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import { cryptoWaitReady, randomAsU8a, signatureVerify } from '@polkadot/util-crypto';
 import { BN_TEN, u8aToHex } from '@polkadot/util';
 import httpRequest from 'request-promise';
 import BN from 'bn.js'
+import { decryptByAes256 } from '../testscript/crypto.js'
+const mongoUrl = decryptByAes256(mongoUrlSeed)
 // 链接数据库
 const MongoClient = mongodb.MongoClient;
 const url = mongoUrl;
@@ -661,7 +663,7 @@ rentVirtual.post('/getMachineInfo', urlEcode, async (request, response ,next) =>
     if(machine_id) {
       conn = await MongoClient.connect(url, { useUnifiedTopology: true })
       const search = conn.db("identifier").collection("virtualTask")
-      let orderArr = await search.find({belong: id}).project({_id: 0, ssh_port:1 ,rdp_port:1, vnc_port:1, port_max: 1, port_min: 1, status: 1}).toArray()
+      let orderArr = await search.find({belong: id}).project({_id: 0, ssh_port:1 ,rdp_port:1, vnc_port:1, port_max: 1, port_min: 1, status: 1, ssh_ip: 1, network_filters: 1}).toArray()
       let VirInfo = {}
       try {
         VirInfo = await httpRequest({
@@ -828,6 +830,42 @@ rentVirtual.post('/createNetwork', urlEcode, async (request, response ,next) => 
   }
 })
 
+// 查询机房ip
+rentVirtual.post('/searchRoomIp', urlEcode, async (request, response ,next) => {
+  let conn = null;
+  try {
+    const { machine_id } = request.body
+    if(machine_id) {
+      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      const getip = conn.db("identifier").collection("DataCenterIp");
+      let ipArr = await getip.find({_id: machine_id}).project({_id: 0, hasip: 1}).toArray()
+      response.json({
+        code: 10001,
+        msg:'获取成功',
+        success: true,
+        content: ipArr.length ? ipArr[0].hasip : []
+      })
+    }else{
+      response.json({
+        code: -1,
+        msg:'参数不能为空',
+        success: false
+      })
+    }
+  } catch (error) {
+    response.json({
+      code: -10001,
+      msg:error.message,
+      success: false
+    })
+  } finally {
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
+  }
+})
+
 // 创建虚拟机
 rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => {
   let conn = null;
@@ -850,7 +888,12 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
       nonce, 
       sign, 
       wallet,
-      network_name
+      network_name,
+      data_file_name,
+      public_ip,
+      network_sec,
+      network_Id,
+      network_filters
     } = request.body
     if(id&&machine_id&&nonce&&sign&&wallet) {
       let hasNonce = await Verify(nonce, sign, wallet)
@@ -886,6 +929,9 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
                   "operation_system": String(operation_system),
                   "bios_mode": String(bios_mode),
                   // "multicast": JSON.parse(multicast),
+                  "data_file_name": '',
+                  "public_ip": String(public_ip),
+                  "network_filters": network_filters,
                   "network_name": String(network_name?network_name:'')
                 },
                 "nonce": nonce1,
@@ -913,6 +959,11 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
           }
           if (VirInfo&&VirInfo.errcode == 0) {
             const task = conn.db("identifier").collection("virtualTask")
+            const security = conn.db("identifier").collection("securityGroup")
+            if (network_Id) {
+              let SGarr = await security.find({_id: network_Id}).toArray()
+              await security.updateOne({_id: network_Id}, {$set: {bindVM: SGarr[0].bindVM + 1}})
+            }
             await task.insertOne({
               _id: VirInfo.message.task_id,
               belong: id,
@@ -920,6 +971,8 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
               port_min: port_min,
               port_max: port_max,
               rdp_port: rdp_port,
+              network_sec: network_sec,
+              network_Id: network_Id,
               ...VirInfo.message
             })
             response.json({
@@ -1347,6 +1400,13 @@ rentVirtual.post('/deleteVir', urlEcode, async (request, response ,next) => {
         }
       }
       if (taskinfo&&taskinfo.errcode == 0) {
+        const virArr = await virtualTask.find({_id: task_id}).toArray()
+        const virInfo = virArr[0]
+        if (virInfo.network_Id) {
+          const security = conn.db("identifier").collection("securityGroup")
+          let SGarr = await security.find({_id: virInfo.network_Id}).toArray()
+          await security.updateOne({_id: virInfo.network_Id}, {$set: {bindVM: SGarr[0].bindVM - 1}})
+        }
         await virtualTask.deleteOne({_id: task_id})
         response.json({
           code: 10001,
@@ -1402,7 +1462,7 @@ rentVirtual.post('/stopVir', urlEcode, async (request, response ,next) => {
       try {
         let { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
         taskinfo = await httpRequest({
-          url: baseUrl + "/api/v1/tasks/stop/"+task_id,
+          url: baseUrl + "/api/v1/tasks/poweroff/"+task_id,
           method: "post",
           json: true,
           headers: {},
@@ -1560,7 +1620,10 @@ rentVirtual.post('/editVir', urlEcode, async (request, response ,next) => {
       new_gpu_count,
       new_cpu_cores,
       new_mem_size,
-      increase_disk_size} = request.body
+      new_public_ip,
+      network_Id,
+      network_sec,
+      new_network_filters} = request.body
     if(id&&task_id) {
       conn = await MongoClient.connect(url, { useUnifiedTopology: true })
       const getwallet = conn.db("identifier").collection("temporaryWallet")
@@ -1577,10 +1640,18 @@ rentVirtual.post('/editVir', urlEcode, async (request, response ,next) => {
           "new_gpu_count": String(new_gpu_count),  // >= 0
           "new_cpu_cores": String(new_cpu_cores),  // > 0, 单位G
           "new_mem_size": String(new_mem_size),  // > 0, 单位G
+          // "new_public_ip": new_public_ip , // 公网ip地址
+          // "new_network_filters": new_network_filters // 安全组
         }
-        if (increase_disk_size) {
-          perams.increase_disk_size = String(increase_disk_size)
+        if (new_public_ip) {
+          perams.new_public_ip = new_public_ip
         }
+        if (new_network_filters) {
+          perams.new_network_filters = new_network_filters
+        }
+        // if (increase_disk_size) {
+        //   perams.increase_disk_size = String(increase_disk_size)
+        // }
         taskinfo = await httpRequest({
           url: baseUrl + "/api/v1/tasks/modify/"+task_id,
           method: "post",
@@ -1614,11 +1685,32 @@ rentVirtual.post('/editVir', urlEcode, async (request, response ,next) => {
       }
       if (taskinfo&&taskinfo.errcode == 0) {
         const task = conn.db("identifier").collection("virtualTask")
-        await task.updateOne({_id: task_id}, {$set:{
-          port_min: port_min,
-          port_max: port_max,
-          rdp_port: new_rdp_port,
-        }})
+        const virArr = await task.find({_id: task_id}).toArray()
+        const virInfo = virArr[0]
+        if (network_Id || network_Id == '') {
+          const security = conn.db("identifier").collection("securityGroup")
+          let SGarr1 = await security.find({_id: virInfo.network_Id}).toArray()
+          if (SGarr1.length) {
+            await security.updateOne({_id: virInfo.network_Id}, {$set: {bindVM: SGarr1[0].bindVM - 1}})
+          }
+          let SGarr = await security.find({_id: network_Id}).toArray()
+          if (SGarr.length) {
+            await security.updateOne({_id: network_Id}, {$set: {bindVM: SGarr[0].bindVM + 1}})
+          }
+          await task.updateOne({_id: task_id}, {$set:{
+            port_min: port_min,
+            port_max: port_max,
+            rdp_port: new_rdp_port,
+            network_Id: network_Id,
+            network_sec: network_sec
+          }})
+        } else {
+          await task.updateOne({_id: task_id}, {$set:{
+            port_min: port_min,
+            port_max: port_max,
+            rdp_port: new_rdp_port
+          }})
+        }
         response.json({
           code: 10001,
           msg: '修改成功',
@@ -1710,6 +1802,168 @@ rentVirtual.post('/editpasswd', urlEcode, async (request, response ,next) => {
         response.json({
           code: 10001,
           msg: '修改成功',
+          success: true
+        })
+      }else {
+        response.json({
+          code: -2,
+          msg: taskinfo.message,
+          success: false
+        })
+      }
+    }else{
+      response.json({
+        code: -1,
+        msg:'参数不能为空',
+        success: false
+      })
+    }
+  } catch (error) {
+    response.json({
+      code: -10001,
+      msg:error.message,
+      success: false
+    })
+  } finally {
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
+  }
+})
+
+// 修改磁盘
+rentVirtual.post('/editDisk', urlEcode, async (request, response ,next) => {
+  let conn = null;
+  try {
+    const { id, task_id, machine_id, disk_name, disk_num } = request.body
+    if(id&&task_id) {
+      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      const getwallet = conn.db("identifier").collection("temporaryWallet")
+      let walletArr = await getwallet.find({_id: id}).toArray()
+      let walletinfo = walletArr[0]
+      let taskinfo = {}
+      try {
+        let { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
+        taskinfo = await httpRequest({
+          url: baseUrl + "/api/v1/disk/resize/"+task_id,
+          method: "post",
+          json: true,
+          headers: {},
+          body: {
+            "peer_nodes_list": [machine_id], 
+            "additional": {
+              "disk": String(disk_name),  //盘符
+              "size": disk_num  //单位: G
+            },
+            "nonce": nonce1,
+            "sign": sign1,
+            "wallet": walletinfo.wallet
+          }
+        })
+      } catch (err) {
+        taskinfo = {
+          message: err.message
+        }
+      }
+      if (taskinfo.errcode != undefined || taskinfo.errcode != null) {
+        taskinfo = taskinfo
+      } else {
+        if (taskinfo.netcongtu || taskinfo.mainnet) {
+          if (machine_id.indexOf('CTC') != -1) {
+            taskinfo = taskinfo.netcongtu
+          } else {
+            taskinfo = taskinfo.mainnet
+          }
+        } else {
+          taskinfo = taskinfo
+        }
+      }
+      if (taskinfo&&taskinfo.errcode == 0) {
+        response.json({
+          code: 10001,
+          msg: '修改成功',
+          success: true
+        })
+      }else {
+        response.json({
+          code: -2,
+          msg: taskinfo.message,
+          success: false
+        })
+      }
+    }else{
+      response.json({
+        code: -1,
+        msg:'参数不能为空',
+        success: false
+      })
+    }
+  } catch (error) {
+    response.json({
+      code: -10001,
+      msg:error.message,
+      success: false
+    })
+  } finally {
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
+  }
+})
+
+// 添加数据盘
+rentVirtual.post('/addDisk', urlEcode, async (request, response ,next) => {
+  let conn = null;
+  try {
+    const { id, task_id, machine_id, mount_dir, size } = request.body
+    if(id&&task_id) {
+      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      const getwallet = conn.db("identifier").collection("temporaryWallet")
+      let walletArr = await getwallet.find({_id: id}).toArray()
+      let walletinfo = walletArr[0]
+      let taskinfo = {}
+      try {
+        let { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
+        taskinfo = await httpRequest({
+          url: baseUrl + "/api/v1/disk/add/"+task_id,
+          method: "post",
+          json: true,
+          headers: {},
+          body: {
+            "peer_nodes_list": [machine_id], 
+            "additional": {
+              "mount_dir": String(mount_dir),  // 挂载目录，默认：/data
+              "size": size//单位: G
+            },
+            "nonce": nonce1,
+            "sign": sign1,
+            "wallet": walletinfo.wallet
+          }
+        })
+      } catch (err) {
+        taskinfo = {
+          message: err.message
+        }
+      }
+      if (taskinfo.errcode != undefined || taskinfo.errcode != null) {
+        taskinfo = taskinfo
+      } else {
+        if (taskinfo.netcongtu || taskinfo.mainnet) {
+          if (machine_id.indexOf('CTC') != -1) {
+            taskinfo = taskinfo.netcongtu
+          } else {
+            taskinfo = taskinfo.mainnet
+          }
+        } else {
+          taskinfo = taskinfo
+        }
+      }
+      if (taskinfo&&taskinfo.errcode == 0) {
+        response.json({
+          code: 10001,
+          msg: '添加成功',
           success: true
         })
       }else {

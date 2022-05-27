@@ -439,9 +439,22 @@ export const baseUrl = 'http://119.145.254.118:5033' // 综合端口号
 /**
  * 连接mongo数据库
  */
-export const mongoUrl = 'mongodb://localhost:27017/identifier' // 本地访问mongo
+// export const mongoUrl = 'mongodb://localhost:27017/identifier' // 本地访问mongo
 // export const mongoUrl = 'mongodb://d**:d********Y@localhost:27017/identifier' // 服务器访问mongo
 
+/**
+ * 连接mongo数据库
+ */
+
+ export const mongoUrlSeed = 'ba22370884954c456be7fc10cbae7a652fbadfb64e4ab9aab4a8a944f1f8ea052abc8968bfdb05ac1dc0f0842872089e' // 本地访问mongo
+ // export const mongoUrlSeed = '3c5c8bc20d96493684d4aa2cd9cd01a4cbf561b618c615ae30bb6f4810a782fcb80ac944eca3e59fc187ab508f0c340c5d287e903be4bb9d1e4c0d12d2098ac8' // 服务器
+ 
+
+/**
+ * 钱包数据
+ */
+ export const walletInfo = 'f16c2efe71e094d0b3dd7b319da9c6a636cc0c7740cb6e900a40220fc3b77ec8f22a99f79038f4f293e82b48c75c8c0a7c8ed484e4fc31529cce38fffe58ec67132fb793553c53f4d084c65760ea4ced1b673c1d89a0f1e8b064bda8267c456e6905cf5278751371556f0233a9542b1109adb99388dcc3aeb2ec13c1b3c216eb55acfe2d41c842d4baeb137f02424757'
+ 
 /**
  * paypal访问域名
  */

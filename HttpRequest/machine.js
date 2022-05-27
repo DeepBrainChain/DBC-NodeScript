@@ -1,9 +1,11 @@
 import express from 'express'
 import mongodb from 'mongodb'
 import bodyParser from 'body-parser'
-import { typeJson, wssChain, mongoUrl, baseUrl } from '../publicResource.js'
+import { typeJson, wssChain, mongoUrlSeed, baseUrl } from '../publicResource.js'
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import httpRequest from 'request-promise';
+import { decryptByAes256 } from '../testscript/crypto.js'
+const mongoUrl = decryptByAes256(mongoUrlSeed)
 // 链接数据库
 const MongoClient = mongodb.MongoClient;
 const url = mongoUrl;

@@ -1,8 +1,10 @@
 import { ApiPromise, WsProvider } from '@polkadot/api';
 import mongodb from 'mongodb'
 import schedule from 'node-schedule'
-import { typeJson, wssChain, mongoUrl } from '../publicResource.js'
+import { typeJson, wssChain, mongoUrlSeed } from '../publicResource.js'
 
+import { decryptByAes256 } from '../testscript/crypto.js'
+const mongoUrl = decryptByAes256(mongoUrlSeed)
 const MongoClient = mongodb.MongoClient;
 const url = mongoUrl;
 let api  = null

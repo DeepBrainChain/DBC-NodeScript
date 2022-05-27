@@ -1,7 +1,9 @@
 import express from 'express'
 import mongodb from 'mongodb'
 import bodyParser from 'body-parser'
-import { mongoUrl } from '../publicResource.js'
+import { mongoUrlSeed } from '../publicResource.js'
+import { decryptByAes256 } from '../testscript/crypto.js'
+const mongoUrl = decryptByAes256(mongoUrlSeed)
 // 链接数据库
 const MongoClient = mongodb.MongoClient;
 const url = mongoUrl;

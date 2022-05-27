@@ -3,8 +3,10 @@ import { hexToString } from '@polkadot/util';
 import mongodb from 'mongodb'
 import schedule from 'node-schedule'
 import httpRequest from 'request-promise';
-import { typeJson, wssChain, mongoUrl, baseUrl } from '../publicResource.js'
+import { typeJson, wssChain, mongoUrlSeed, baseUrl } from '../publicResource.js'
 
+import { decryptByAes256 } from '../testscript/crypto.js'
+const mongoUrl = decryptByAes256(mongoUrlSeed)
 const MongoClient = mongodb.MongoClient;
 const url = mongoUrl;
 let api  = null

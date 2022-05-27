@@ -2,8 +2,11 @@ import express from 'express'
 import mongodb from 'mongodb'
 import bodyParser from 'body-parser'
 import httpRequest from 'request-promise';
-import { mongoUrl, baseUrl } from '../publicResource.js'
+import { mongoUrlSeed, baseUrl } from '../publicResource.js'
 import { cryptoWaitReady, signatureVerify } from '@polkadot/util-crypto';
+
+import { decryptByAes256 } from '../testscript/crypto.js'
+const mongoUrl = decryptByAes256(mongoUrlSeed)
 // 链接数据库
 const MongoClient = mongodb.MongoClient;
 const url = mongoUrl;

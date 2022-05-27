@@ -1,12 +1,15 @@
 import express from 'express'
 import mongodb from 'mongodb'
 import bodyParser from 'body-parser'
-import { mongoUrl, wssChain, typeJson, paypalUrl } from '../publicResource.js'
+import { mongoUrlSeed, wssChain, typeJson, paypalUrl, walletInfo } from '../publicResource.js'
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import httpRequest from 'request-promise';
 import { BN_TEN } from '@polkadot/util';
 import BN from 'bn.js'
+import { decryptByAes256 } from '../testscript/crypto.js'
+const mongoUrl = decryptByAes256(mongoUrlSeed)
+const walletTransfer = JSON.parse(decryptByAes256(walletInfo))
 // 链接数据库
 const MongoClient = mongodb.MongoClient;
 const url = mongoUrl;
@@ -93,10 +96,10 @@ Recharge.post('/createOrder', urlEcode, async (request, response ,next) => {
   const dbcnowPrice = dbcPrice/1000000
   try {
     conn = await MongoClient.connect(url, { useUnifiedTopology: true })
-    const walletCon = conn.db("identifier").collection("contractwallet")
-    let walletArr = await walletCon.find({ _id: 'contractwallet' }).toArray()
-    let walletInfo = walletArr[0]
-    const balance = await getbalance(walletInfo.wallet)
+    // const walletCon = conn.db("identifier").collection("contractwallet")
+    // let walletArr = await walletCon.find({ _id: 'contractwallet' }).toArray()
+    // let walletInfo = walletArr[0]
+    const balance = await getbalance(walletTransfer.wallet)
     if (usd) {
       let orderId = null
       const orderInfo = conn.db("identifier").collection("buyDBCorder")
@@ -193,9 +196,9 @@ Recharge.get('/confirmPayment', async (request, response ,next) => {
             })
           } else {
             const paypal = conn.db("identifier").collection("paypalBuyDBC")
-            const walletCon = conn.db("identifier").collection("contractwallet")
-            let walletArr = await walletCon.find({ _id: 'contractwallet' }).toArray()
-            let walletInfo = walletArr[0]
+            // const walletCon = conn.db("identifier").collection("contractwallet")
+            // let walletArr = await walletCon.find({ _id: 'contractwallet' }).toArray()
+            // let walletInfo = walletArr[0]
             let orderArr = await paypal.find({ _id: String(payId) }).toArray()
             if (orderArr.length) {
               let orderInfo = orderArr[0]
@@ -226,7 +229,7 @@ Recharge.get('/confirmPayment', async (request, response ,next) => {
               await GetApi()
               const siPower = new BN(15)
               const bob = inputToBn(String(odArrinfo.dbc), siPower, 15)
-              let accountFromKeyring = await keyring.addFromUri(walletInfo.seed);
+              let accountFromKeyring = await keyring.addFromUri(walletTransfer.seed);
               await cryptoWaitReady();
               await api.tx.balances
               .transfer( wallet, bob )

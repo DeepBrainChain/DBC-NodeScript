@@ -9,6 +9,7 @@ import { getAuditList } from './auditListApi.js'
 import { rentVirtual } from './RentVirtualApi.js'
 import { Recharge } from './PaypalApi.js'
 import { signleRentVir } from './signleRentVir.js'
+import { Security } from './security.js'
 // 定义serve
 const serve = express()
 // 设置serve请求头参数
@@ -39,6 +40,7 @@ serve.use('/api/audit', getAuditList)
 serve.use('/api/rentMachine', rentVirtual)
 serve.use('/api/paypal', Recharge)
 serve.use('/api/signlerent', signleRentVir)
+serve.use('/api/security', Security)
 //404判断
 serve.use(function (req, res) {
   res.send('404 not found');

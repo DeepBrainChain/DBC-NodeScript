@@ -1,10 +1,12 @@
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import mongodb from 'mongodb'
 import schedule from 'node-schedule'
-import { typeJson, wssChain, mongoUrl, designatedWallet } from '../publicResource.js'
+import { typeJson, wssChain, mongoUrlSeed, designatedWallet } from '../publicResource.js'
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import { BN_TEN } from '@polkadot/util';
 import BN from 'bn.js'
+import { decryptByAes256 } from '../testscript/crypto.js'
+const mongoUrl = decryptByAes256(mongoUrlSeed)
 const MongoClient = mongodb.MongoClient;
 const url = mongoUrl;
 let api  = null
