@@ -249,3 +249,34 @@ Select.post('/getlistByRoom', urlEcode, async (request, response ,next) => {
     }
   } 
 })
+
+// 获取已有ip的机器列表
+Select.get('/getMacIp', async (request, response ,next) => {
+  let conn = null;
+  try {
+    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+    const getIp = conn.db("identifier").collection("DataCenterIp")
+    let iPArr = await getIp.find({}).project({hasip: 0}).toArray()
+    let newList = []
+    if (iPArr.length) {
+      newList = iPArr.map(el => el._id)
+    }
+    response.json({
+      success: true,
+      code: 10001,
+      msg: '查询成功',
+      content: newList
+    })
+  } catch (error) {
+    response.json({
+      code: -10001,
+      msg:error.message,
+      success: false
+    })
+  } finally {
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
+  } 
+})

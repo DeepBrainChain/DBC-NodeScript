@@ -663,7 +663,7 @@ rentVirtual.post('/getMachineInfo', urlEcode, async (request, response ,next) =>
     if(machine_id) {
       conn = await MongoClient.connect(url, { useUnifiedTopology: true })
       const search = conn.db("identifier").collection("virtualTask")
-      let orderArr = await search.find({belong: id}).project({_id: 0, ssh_port:1 ,rdp_port:1, vnc_port:1, port_max: 1, port_min: 1, status: 1, ssh_ip: 1, network_filters: 1}).toArray()
+      let orderArr = await search.find({belong: {$regex: machine_id}}).project({_id: 0, ssh_port:1 ,rdp_port:1, vnc_port:1, port_max: 1, port_min: 1, status: 1, ssh_ip: 1, network_filters: 1}).toArray()
       let VirInfo = {}
       try {
         VirInfo = await httpRequest({
@@ -1964,6 +1964,84 @@ rentVirtual.post('/addDisk', urlEcode, async (request, response ,next) => {
         response.json({
           code: 10001,
           msg: '添加成功',
+          success: true
+        })
+      }else {
+        response.json({
+          code: -2,
+          msg: taskinfo.message,
+          success: false
+        })
+      }
+    }else{
+      response.json({
+        code: -1,
+        msg:'参数不能为空',
+        success: false
+      })
+    }
+  } catch (error) {
+    response.json({
+      code: -10001,
+      msg:error.message,
+      success: false
+    })
+  } finally {
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
+  }
+})
+
+// 清楚机器内存
+rentVirtual.post('/clearMem', urlEcode, async (request, response ,next) => {
+  let conn = null;
+  try {
+    const { id, machine_id } = request.body
+    if(id&&machine_id) {
+      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      const getwallet = conn.db("identifier").collection("temporaryWallet")
+      let walletArr = await getwallet.find({_id: id}).toArray()
+      let walletinfo = walletArr[0]
+      let taskinfo = {}
+      try {
+        let { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
+        taskinfo = await httpRequest({
+          url: baseUrl + "/api/v1/mining_nodes/free_memory",
+          method: "post",
+          json: true,
+          headers: {},
+          body: {
+            "peer_nodes_list": [machine_id], 
+            "additional": {},
+            "nonce": nonce1,
+            "sign": sign1,
+            "wallet": walletinfo.wallet
+          }
+        })
+      } catch (err) {
+        taskinfo = {
+          message: err.message
+        }
+      }
+      if (taskinfo.errcode != undefined || taskinfo.errcode != null) {
+        taskinfo = taskinfo
+      } else {
+        if (taskinfo.netcongtu || taskinfo.mainnet) {
+          if (machine_id.indexOf('CTC') != -1) {
+            taskinfo = taskinfo.netcongtu
+          } else {
+            taskinfo = taskinfo.mainnet
+          }
+        } else {
+          taskinfo = taskinfo
+        }
+      }
+      if (taskinfo&&taskinfo.errcode == 0) {
+        response.json({
+          code: 10001,
+          msg: '清理成功',
           success: true
         })
       }else {

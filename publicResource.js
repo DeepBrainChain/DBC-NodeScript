@@ -446,8 +446,8 @@ export const baseUrl = 'http://119.145.254.118:5033' // 综合端口号
  * 连接mongo数据库
  */
 
- export const mongoUrlSeed = 'ba22370884954c456be7fc10cbae7a652fbadfb64e4ab9aab4a8a944f1f8ea052abc8968bfdb05ac1dc0f0842872089e' // 本地访问mongo
- // export const mongoUrlSeed = '3c5c8bc20d96493684d4aa2cd9cd01a4cbf561b618c615ae30bb6f4810a782fcb80ac944eca3e59fc187ab508f0c340c5d287e903be4bb9d1e4c0d12d2098ac8' // 服务器
+export const mongoUrlSeed = 'ba22370884954c456be7fc10cbae7a652fbadfb64e4ab9aab4a8a944f1f8ea052abc8968bfdb05ac1dc0f0842872089e' // 本地访问mongo
+// export const mongoUrlSeed = '3c5c8bc20d96493684d4aa2cd9cd01a4cbf561b618c615ae30bb6f4810a782fcb80ac944eca3e59fc187ab508f0c340c5d287e903be4bb9d1e4c0d12d2098ac8' // 服务器
  
 
 /**
@@ -471,4 +471,7 @@ export const designatedWallet = '5F7L9bc3q4XdhVstJjVB2o7S8RHz2YKsHUB6k3uQpErTmVW
  * forever start -o http-out.log -e http-err.log router.js
  * forever start -o reviewReward-out.log -e reviewReward-err.log ReviewRewards.js
  * forever start -o verification-out.log -e verification-err.log VerificationMachine.js
+ * forever start -o machine-out.log -e machine-err.log machineInfo.js
+ * forever start -o signleVir-out.log -e signleVir-err.log signleVirStatus.js
+ * forever start -o changeSG-out.log -e changeSG-err.log changeSecurity.js
  */

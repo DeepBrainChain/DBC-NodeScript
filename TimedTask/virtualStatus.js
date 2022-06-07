@@ -58,6 +58,7 @@ const checkVirtualStatus = async () => {
     const wallet = conn.db("identifier").collection("temporaryWallet")
     const virInfo = conn.db("identifier").collection("virtualTask")
     const security = conn.db("identifier").collection("securityGroup")
+    const getSession = conn.db("identifier").collection("sessionInfo");
     let orderArr1 = await Info.find({orderStatus: 2}).toArray() // 查询订单中待确认租用的订单
     let orderArr2 = await Info.find({orderStatus: 3}).toArray() // 查询订单中正在使用中的订单
     let orderArr3 = await Info.find({orderStatus: 4}).toArray() // 查询订单中结束的订单
@@ -108,6 +109,7 @@ const checkVirtualStatus = async () => {
     }
     for(let i = 0; i < orderArr3.length; i++){ // 9天删除数据库中对应的结束订单虚拟机
       await virInfo.updateMany({ belong: orderArr3[i]._id }, {$set:{status: 'closed'}})
+      await getSession.deleteOne({ _id: orderArr3[i]._id })
       if ((orderArr3[i].createTime + orderArr3[i].day*24*60*60*1000 + 777600000) < Date.now()) {
         let virArr = await virInfo.find({ belong: orderArr3[i]._id }).toArray()
         for (let j = 0; j < virArr.length; j++) {
@@ -121,6 +123,7 @@ const checkVirtualStatus = async () => {
     }
     for(let i = 0; i < orderArr5.length; i++){ // 9天删除数据库中对应的取消订单虚拟机
       await virInfo.updateMany({ belong: orderArr5[i]._id }, {$set:{status: 'closed'}})
+      await getSession.deleteOne({ _id: orderArr5[i]._id })
       if ((orderArr5[i].createTime + 172800000) < Date.now() && !(orderArr5[i].searchHidden)) {
         let virArr = await virInfo.find({ belong: orderArr5[i]._id }).toArray()
         for (let j = 0; j < virArr.length; j++) {

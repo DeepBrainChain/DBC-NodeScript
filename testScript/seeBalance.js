@@ -1,11 +1,11 @@
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
-import { cryptoWaitReady, randomAsU8a } from '@polkadot/util-crypto';
+import { cryptoWaitReady, mnemonicToMiniSecret, randomAsU8a } from '@polkadot/util-crypto';
 import { BN_TEN, formatBalance, isHex, stringToU8a , u8aToHex, hexToU8a, hexToString, stringToHex } from '@polkadot/util';
 import BN from 'bn.js'
 import mongodb from 'mongodb'
 import schedule from 'node-schedule'
 import minimist from 'minimist'
-import { typeJson, wssChain, mongoUrl } from '../publicResource.js'
+import { typeJson, wssChain } from '../publicResource.js'
 
 const MongoClient = mongodb.MongoClient;
 const url = "mongodb://localhost:27017";
@@ -54,7 +54,7 @@ export const getAccountBalance = async (wallet) => {
   return de?.toJSON();
 }
 
-getAccountBalance();
+// getAccountBalance();
 
 // 输入的值转BN
 export const inputToBn = (input, siPower, basePower) => {
@@ -109,4 +109,14 @@ export const transfer1 = async () => {
   })
 }
 
-transfer1();
+// transfer1();
+
+
+// 通过助记词获取密钥对
+const MNEMONIC = 'team wage cable retire deal hill friend forget syrup vote input ethics';
+
+const seedAlice = mnemonicToMiniSecret(MNEMONIC);
+
+// 通过助记词生成 Uint8Array格式的私钥
+console.log(u8aToHex(seedAlice), 'seedAlice');
+
