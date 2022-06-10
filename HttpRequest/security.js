@@ -69,7 +69,7 @@ Security.post('/getSecurity', urlEcode, async (request, response ,next) => {
       if (SGId) {
         let sgarr = await security.find({_id: SGId}).toArray()
         if (sgarr.length) {
-          let ruleArr = await rule.find({belong: SGId}).toArray()
+          let ruleArr = await rule.find({belong: SGId}).sort({"createTime": -1}).toArray()
           sgarr[0].rule = ruleArr
         }
         response.json({
@@ -81,7 +81,7 @@ Security.post('/getSecurity', urlEcode, async (request, response ,next) => {
       } else {
         let sgarr = await security.find({wallet: wallet}).toArray()
         for (let i = 0; i< sgarr.length; i++) {
-          let ruleArr = await rule.find({belong: sgarr[i]._id}).toArray()
+          let ruleArr = await rule.find({belong: sgarr[i]._id}).sort({"createTime": -1}).toArray()
           sgarr[i].rule = ruleArr
         }
         response.json({
@@ -116,7 +116,7 @@ Security.post('/getSecurity', urlEcode, async (request, response ,next) => {
 Security.post('/createSecurity', urlEcode, async (request, response ,next) => {
   let conn = null
   // const wallet = request.body.wallet
-  const { SGId, wallet, direction, protocol, port, object, action } = request.body
+  const { SGId, wallet, direction, protocol, port, object, action, strategy } = request.body
   try {
     conn = await MongoClient.connect(url, { useUnifiedTopology: true })
     if (wallet) {
@@ -137,7 +137,9 @@ Security.post('/createSecurity', urlEcode, async (request, response ,next) => {
           protocol: protocol,
           port: port,
           object: object,
-          action: SGArr[0].bindVM == 0 ? 'allow' : 'setting'
+          action: SGArr[0].bindVM == 0 ? 'allow' : 'setting',
+          strategy: strategy,
+          createTime: Date.now()
         })
         response.json({
           code: 10001,
@@ -147,6 +149,8 @@ Security.post('/createSecurity', urlEcode, async (request, response ,next) => {
       } else {
         const securityId = createSecurityId()
         const ruleId = createRuleId()
+        const ruleId1 = createRuleId()
+        const ruleId2 = createRuleId()
         const nonce = createName()
         await security.insertOne({
           _id: securityId,
@@ -156,15 +160,51 @@ Security.post('/createSecurity', urlEcode, async (request, response ,next) => {
           bindVM: 0,
           setting: false
         })
-        await rule.insertOne({
-          _id: ruleId,
-          belong: securityId,
-          direction: direction,
-          protocol: protocol,
-          port: port,
-          object: object,
-          action: 'allow'
-        })
+        await rule.insertMany([
+          {
+            _id: ruleId1,
+            belong: securityId,
+            direction: 'in',
+            protocol: 'all',
+            port: 'all',
+            object: '0.0.0.0/0',
+            action: 'allow',
+            strategy: 'drop',
+            createTime: Date.now(),
+          },
+          {
+            _id: ruleId2,
+            belong: securityId,
+            direction: 'out',
+            protocol: 'all',
+            port: 'all',
+            object: '0.0.0.0/0',
+            action: 'allow',
+            strategy: 'accept',
+            createTime: Date.now() + 1000,
+          },
+          {
+            _id: ruleId,
+            belong: securityId,
+            direction: direction,
+            protocol: protocol,
+            port: port,
+            object: object,
+            action: 'allow',
+            strategy: strategy,
+            createTime: Date.now() + 2000,
+          }
+        ])
+        // await rule.insertMany({
+        //   _id: ruleId,
+        //   belong: securityId,
+        //   direction: direction,
+        //   protocol: protocol,
+        //   port: port,
+        //   object: object,
+        //   action: 'allow',
+        //   strategy: strategy
+        // })
         response.json({
           code: 10001,
           msg: '创建成功',
@@ -403,7 +443,7 @@ Security.post('/deleteSGRule', urlEcode, async (request, response ,next) => {
 // 修改安全组规则
 Security.post('/editSGRule', urlEcode, async (request, response ,next) => {
   let conn = null
-  const { SGId, ruleId, direction, protocol, port, object } = request.body
+  const { SGId, ruleId, direction, protocol, port, object, strategy } = request.body
   try {
     conn = await MongoClient.connect(url, { useUnifiedTopology: true })
     if (ruleId&&direction&&protocol&&port&&object) {
@@ -421,7 +461,8 @@ Security.post('/editSGRule', urlEcode, async (request, response ,next) => {
           protocol: protocol,
           port: port,
           object: object,
-          action: SGArr[0].bindVM == 0 ? 'allow' : 'setting'
+          action: SGArr[0].bindVM == 0 ? 'allow' : 'setting',
+          strategy: strategy
         }
       })
       response.json({
