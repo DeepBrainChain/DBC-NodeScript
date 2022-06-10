@@ -62,7 +62,7 @@ const checkvirSG = async () => {
             let new_network_filters = []
             const rule = await SGRule.find({belong: SGArr[i]._id}).toArray()
             rule.map(el1 => {
-              let str = `${el1.direction},${el1.protocol},${el1.port},${el1.object},accept`
+              let str = `${el1.direction},${el1.protocol},${el1.port},${el1.object},${el1.strategy}`
               new_network_filters.push(str)
             })
             let perams = {
