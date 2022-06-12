@@ -113,7 +113,7 @@ export const transfer1 = async () => {
 
 
 // 通过助记词获取密钥对
-const MNEMONIC = 'team wage cable retire deal hill friend forget syrup vote input ethics';
+const MNEMONIC = '';
 
 const seedAlice = mnemonicToMiniSecret(MNEMONIC);
 

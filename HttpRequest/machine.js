@@ -4,7 +4,7 @@ import bodyParser from 'body-parser'
 import { typeJson, wssChain, mongoUrlSeed, baseUrl } from '../publicResource.js'
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import httpRequest from 'request-promise';
-import { decryptByAes256 } from '../testscript/crypto.js'
+import { decryptByAes256 } from '../testScript/crypto.js'
 const mongoUrl = decryptByAes256(mongoUrlSeed)
 // 链接数据库
 const MongoClient = mongodb.MongoClient;

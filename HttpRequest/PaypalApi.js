@@ -7,7 +7,7 @@ import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import httpRequest from 'request-promise';
 import { BN_TEN } from '@polkadot/util';
 import BN from 'bn.js'
-import { decryptByAes256 } from '../testscript/crypto.js'
+import { decryptByAes256 } from '../testScript/crypto.js'
 const mongoUrl = decryptByAes256(mongoUrlSeed)
 const walletTransfer = JSON.parse(decryptByAes256(walletInfo))
 // 链接数据库

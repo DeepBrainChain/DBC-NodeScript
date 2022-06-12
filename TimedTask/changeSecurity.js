@@ -2,7 +2,7 @@ import mongodb from 'mongodb'
 import schedule from 'node-schedule'
 import httpRequest from 'request-promise';
 import { baseUrl, mongoUrlSeed } from '../publicResource.js'
-import { decryptByAes256 } from '../testscript/crypto.js'
+import { decryptByAes256 } from '../testScript/crypto.js'
 import { Keyring } from '@polkadot/api';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import { u8aToHex } from '@polkadot/util';

@@ -7,7 +7,7 @@ import { cryptoWaitReady, randomAsU8a, signatureVerify } from '@polkadot/util-cr
 import { BN_TEN, u8aToHex } from '@polkadot/util';
 import httpRequest from 'request-promise';
 import BN from 'bn.js'
-import { decryptByAes256 } from '../testscript/crypto.js'
+import { decryptByAes256 } from '../testScript/crypto.js'
 const mongoUrl = decryptByAes256(mongoUrlSeed)
 // 链接数据库
 const MongoClient = mongodb.MongoClient;

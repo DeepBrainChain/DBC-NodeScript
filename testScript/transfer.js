@@ -44,15 +44,15 @@ export const transfer1 = async ( value, seed, toWallet) => {
   const bob = inputToBn(String(value), siPower, 15)
   let accountFromKeyring = await keyring.addFromUri(seed)
   await cryptoWaitReady();
-  await api?.tx.balances
+  await api.tx.balances
   .transfer( toWallet, bob )
   .signAndSend( accountFromKeyring , ( { events = [], status , dispatchError  } ) => {
     if (status.isInBlock) {
       events.forEach(({ event: { method, data: [error] } }) => {
         if (error.isModule && method == 'ExtrinsicFailed') {
-          console.log('转账失败');
+          console.log('transfer Failed');
         }else if(method == 'ExtrinsicSuccess'){
-          console.log('转账成功');
+          console.log('transfer Success');
         }
       });
     }
@@ -62,4 +62,4 @@ export const transfer1 = async ( value, seed, toWallet) => {
   })
 }
 
-transfer1('39.66', '0xf01a5b49cb54aaaac44f1e96bf7500dc53f3b7df3091312821e237d598142806', '5CkWErxCtUPWmQhmX3SXs5UckE7FNpzagHVESH4kiLbStoVK');
+transfer1('39.66', 'your seed', 'transfer wallet');

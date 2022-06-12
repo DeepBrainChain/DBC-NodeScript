@@ -4,7 +4,7 @@ import schedule from 'node-schedule'
 import request from 'request-promise';
 import { typeJson, wssChain, mongoUrlSeed, baseUrl } from '../publicResource.js'
 
-import { decryptByAes256 } from '../testscript/crypto.js'
+import { decryptByAes256 } from '../testScript/crypto.js'
 const mongoUrl = decryptByAes256(mongoUrlSeed)
 const MongoClient = mongodb.MongoClient;
 const url = mongoUrl;

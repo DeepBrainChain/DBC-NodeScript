@@ -6,7 +6,7 @@ import { typeJson, wssChain, mongoUrlSeed, baseUrl, designatedWallet } from '../
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import { BN_TEN } from '@polkadot/util';
 import BN from 'bn.js'
-import { decryptByAes256 } from '../testscript/crypto.js'
+import { decryptByAes256 } from '../testScript/crypto.js'
 const mongoUrl = decryptByAes256(mongoUrlSeed)
 const MongoClient = mongodb.MongoClient;
 const url = mongoUrl;

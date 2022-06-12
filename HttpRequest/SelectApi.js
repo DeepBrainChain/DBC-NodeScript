@@ -2,7 +2,7 @@ import express from 'express'
 import mongodb from 'mongodb'
 import bodyParser from 'body-parser'
 import { mongoUrlSeed } from '../publicResource.js'
-import { decryptByAes256 } from '../testscript/crypto.js'
+import { decryptByAes256 } from '../testScript/crypto.js'
 const mongoUrl = decryptByAes256(mongoUrlSeed)
 // 链接数据库
 const MongoClient = mongodb.MongoClient;

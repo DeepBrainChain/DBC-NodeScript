@@ -5,7 +5,7 @@ import httpRequest from 'request-promise';
 import { mongoUrlSeed, baseUrl } from '../publicResource.js'
 import { cryptoWaitReady, signatureVerify } from '@polkadot/util-crypto';
 
-import { decryptByAes256 } from '../testscript/crypto.js'
+import { decryptByAes256 } from '../testScript/crypto.js'
 const mongoUrl = decryptByAes256(mongoUrlSeed)
 // 链接数据库
 const MongoClient = mongodb.MongoClient;
