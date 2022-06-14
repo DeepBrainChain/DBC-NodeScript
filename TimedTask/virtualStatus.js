@@ -64,6 +64,7 @@ const checkVirtualStatus = async () => {
     let orderArr3 = await Info.find({orderStatus: 4}).toArray() // 查询订单中结束的订单
     let orderArr4 = await Info.find({orderStatus: 6}).toArray() // 查询订单中正在退币的订单
     let orderArr5 = await Info.find({orderStatus: 5}).toArray() // 查询订单中取消的订单
+    let orderArr6 = await Info.find({errRefund: true}).toArray() // 查询退币失败的订单
     for(let i = 0; i < orderArr1.length; i++){
       if (orderArr1[i].createTime + 30*60*1000 < Date.now()) {
         await Info.updateOne({_id: orderArr1[i]._id}, {$set:{orderStatus: 6, network_name: ''}})
@@ -158,6 +159,34 @@ const checkVirtualStatus = async () => {
               conn1 = await MongoClient.connect(url, { useUnifiedTopology: true })
               Info1 = conn1.db("identifier").collection("VirtualInfo")
               await Info1.updateOne({_id: orderArr4[i]._id}, {$set:{orderStatus: 5, network_name: ''}}) // 订单取消
+              if (conn1 != null){
+                conn1.close()
+                conn1 = null
+              }
+            }
+          });
+        }
+      })
+    }
+    for(let i = 0; i < orderArr6.length; i++){
+      await GetApi()
+      let walletArr = await wallet.find({_id: orderArr6[i]._id}).toArray()
+      let walletinfo = walletArr[0]
+      let accountFromKeyring = await keyring.addFromUri(walletinfo.seed);
+      const siPower = new BN(15)
+      const bob = inputToBn(String(orderArr6[i].dbc-10), siPower, 15)
+      await cryptoWaitReady();
+      await api.tx.balances
+      .transfer( orderArr6[i].wallet, bob )
+      .signAndSend( accountFromKeyring , ( { events = [], status , dispatchError  } ) => {
+        if (status.isInBlock) {
+          events.forEach( async ({ event: { method, data: [error] } }) => {
+            if(method == 'ExtrinsicSuccess'){
+              let Info1 = null
+              let conn1 = null
+              conn1 = await MongoClient.connect(url, { useUnifiedTopology: true })
+              Info1 = conn1.db("identifier").collection("VirtualInfo")
+              await Info1.updateOne({_id: orderArr6[i]._id}, {$set:{errRefund: false}})
               if (conn1 != null){
                 conn1.close()
                 conn1 = null

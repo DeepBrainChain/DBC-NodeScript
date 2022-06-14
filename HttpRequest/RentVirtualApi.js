@@ -1414,6 +1414,13 @@ rentVirtual.post('/deleteVir', urlEcode, async (request, response ,next) => {
           success: true
         })
       } else if (taskinfo.message == 'task_id not exist') {
+        const virArr = await virtualTask.find({_id: task_id}).toArray()
+        const virInfo = virArr[0]
+        if (virInfo.network_Id) {
+          const security = conn.db("identifier").collection("securityGroup")
+          let SGarr = await security.find({_id: virInfo.network_Id}).toArray()
+          await security.updateOne({_id: virInfo.network_Id}, {$set: {bindVM: SGarr[0].bindVM - 1}})
+        }
         await virtualTask.deleteOne({ _id: task_id })
         response.json({
           code: 10002,
