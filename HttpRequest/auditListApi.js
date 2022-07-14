@@ -512,3 +512,158 @@ getAuditList.get('/getCoefficient', async (request, response ,next) => {
     }
   } 
 })
+
+// 获取GPU类型
+getAuditList.get('/getGpuList', async (request, response ,next) => {
+  let conn = null;
+  try {
+    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+    const test = conn.db("identifier").collection("GPU_information")
+    var arr = await test.find({}).toArray()
+    response.json({
+      success: true,
+      code: 10001,
+      msg:'获取成功',
+      content: arr
+    })
+  } catch (error) {
+    response.json({
+      code: -10001,
+      msg:error.message,
+      success: false
+    })
+  } finally {
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
+  } 
+})
+
+// 保存抢单hash值
+getAuditList.post('/saveOrderHash', urlEcode, async (request, response ,next) => {
+  let conn = null;
+  try {
+    let { wallet, signature, signaturemsg } = request.body
+    if (wallet&&signature&&signaturemsg) {
+      let hasNonce = await Verify(signaturemsg, signature, wallet)
+      if (hasNonce) {
+        conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+        const searchNonce = conn.db("identifier").collection("nonceList")
+        let NonceInfo = await searchNonce.find({wallet: wallet, nonce: signaturemsg, belong: 'auditvirtual'}).toArray()
+        if (!NonceInfo.length) {
+          await searchNonce.insertOne({ nonce: signaturemsg, wallet: wallet, belong: 'auditvirtual' })
+          const ResultHash = conn.db("identifier").collection("ResultHashInfo")
+          let seeHash = await ResultHash.find({_id: wallet + request.body.report_id }).toArray()
+          if (seeHash.length) {
+            await ResultHash.updateOne({ _id: wallet + request.body.report_id }, { $set: request.body})
+          } else {
+            let insertData = {
+              _id: wallet + request.body.report_id,
+              ...request.body
+            }
+            await ResultHash.insertOne(insertData)
+          }
+          response.json({
+            code: 10001,
+            msg: '保存成功',
+            success: true
+          })
+        } else {
+          response.json({
+            code: -3,
+            msg:'重复签名，验证无效',
+            success: false
+          })
+        }
+      } else {
+        response.json({
+          code: -2,
+          msg:'签名验证失败',
+          success: false
+        })
+      }
+    } else {
+      response.json({
+        code: -1,
+        msg:'参数不能为空',
+        success: false
+      })
+    }
+  } catch (error) {
+    response.json({
+      code: -10001,
+      msg:error.message,
+      success: false
+    })
+  } finally {
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
+  } 
+})
+
+// 获取抢单提交的Hash
+getAuditList.post('/getOrderHash', urlEcode, async (request, response ,next) => {
+  let conn = null;
+  try {
+    let { report_id, wallet, signature, signaturemsg } = request.body
+    if (wallet&&signature&&signaturemsg) {
+      let hasNonce = await Verify(signaturemsg, signature, wallet)
+      if (hasNonce) {
+        conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+        const searchNonce = conn.db("identifier").collection("nonceList")
+        let NonceInfo = await searchNonce.find({wallet: wallet, nonce: signaturemsg, belong: 'auditvirtual'}).toArray()
+        if (!NonceInfo.length) {
+          await searchNonce.insertOne({ nonce: signaturemsg, wallet: wallet, belong: 'auditvirtual' })
+          const ResultHash = conn.db("identifier").collection("ResultHashInfo")
+          let seeHash = await ResultHash.find({_id: wallet + report_id }).toArray()
+          if (seeHash.length) {
+            response.json({
+              code: 10001,
+              msg: '查询成功',
+              success: true,
+              content: seeHash[0]
+            })
+          } else {
+            response.json({
+              code: -4,
+              msg:'未查询到提交的原始信息',
+              success: false
+            })
+          }
+        } else {
+          response.json({
+            code: -3,
+            msg:'重复签名，验证无效',
+            success: false
+          })
+        }
+      } else {
+        response.json({
+          code: -2,
+          msg:'签名验证失败',
+          success: false
+        })
+      }
+    } else {
+      response.json({
+        code: -1,
+        msg:'参数不能为空',
+        success: false
+      })
+    }
+  } catch (error) {
+    response.json({
+      code: -10001,
+      msg:error.message,
+      success: false
+    })
+  } finally {
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
+  } 
+})

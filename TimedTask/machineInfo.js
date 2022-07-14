@@ -10,7 +10,6 @@ const mongoUrl = decryptByAes256(mongoUrlSeed)
 const MongoClient = mongodb.MongoClient;
 const url = mongoUrl;
 let api  = null
-let congtuapi  = null
 let conn = null
 // 测试链上交互
 export const GetApi = async () =>{
@@ -23,27 +22,11 @@ export const GetApi = async () =>{
   }
   return { api }
 }
-// 聪图链上交互
-export const GetApi2 = async () =>{
-  if (!congtuapi) {
-    const provider = new WsProvider(wssChain.congtuDbc)
-    congtuapi = await ApiPromise.create({ 
-      provider ,
-      types: CTtypeJson
-    })
-  }
-  return { congtuapi }
-}
 
 const getBlockTime = async (type) => {
   let de = null;
-  if (type == 'congtu') {
-    await GetApi2();
-    de = await congtuapi.query.system.number();
-  } else {
-    await GetApi()
-    de = await api.query.system.number();
-  }
+  await GetApi()
+  de = await api.query.system.number();
   return de.toJSON();
 }
 
@@ -53,16 +36,9 @@ const getBlockTime = async (type) => {
  */
  export const liveMachine = async () => {
   await GetApi()
-  await GetApi2()
   const machine = await api.query.onlineProfile.liveMachines()
-  const machine2 = await congtuapi.query.onlineProfile.liveMachines()
-  let list = [...machine.online_machine.toHuman(), ...machine.rented_machine.toHuman(), ...machine.offline_machine.toHuman()]
-  let list2 = [...machine2.online_machine.toHuman(), ...machine2.rented_machine.toHuman(), ...machine2.offline_machine.toHuman()]
-  let list3 = list2.map(el => {
-    return 'CTC'+el
-  })
-  const newList = [...list, ...list3]
-  return newList
+  let list = [...machine.online_machine.toHuman(), ...machine.rented_machine.toHuman()]
+  return list
 }
 
 /**
@@ -71,19 +47,10 @@ const getBlockTime = async (type) => {
  */
  export const machineInfo = async (machineId) => {
   let info = null
-  if (machineId.indexOf('CTC') != -1) {
-    await GetApi2()
-    let id = machineId.slice(3)
-    info = await congtuapi.query.onlineProfile.machinesInfo(id)
-    info = info.toJSON()
-    info.original_id = id
-    info.machine_id = machineId
-  } else {
-    await GetApi()
-    info = await api.query.onlineProfile.machinesInfo(machineId)
-    info = info.toJSON()
-    info.original_id = machineId
-  }
+  await GetApi()
+  info = await api.query.onlineProfile.machinesInfo(machineId)
+  info = info.toJSON()
+  info.original_id = machineId
   return info
 }
 
@@ -117,7 +84,7 @@ const getMachine = async () => {
     let list = await liveMachine()
     if (list.length) {
       conn = await MongoClient.connect(url, { useUnifiedTopology: true })
-      const machineConn = conn.db("identifier").collection("CT_machineInfo")
+      const machineConn = conn.db("identifier").collection("MachineDetailsInfo")
       let machineArr_add = []
       let hasMachine = await machineConn.aggregate([{$group:{_id: '$machine_id'}}]).toArray()
       let machineArr_has = hasMachine.map(el => {
@@ -248,32 +215,32 @@ const getvirMachine = async () => {
   }
 }
 
-// getMachine();
+getMachine();
 getvirMachine();
 
 export const scheduleCronstyle = () => {
   schedule.scheduleJob('00 50 * * * *',function(){
-    // getMachine();
+    getMachine();
     getvirMachine();
   });
   schedule.scheduleJob('00 40 * * * *',function(){
-    // getMachine();
+    getMachine();
     getvirMachine();
   });
   schedule.scheduleJob('00 30 * * * *',function(){
-    // getMachine();
+    getMachine();
     getvirMachine();
   });
   schedule.scheduleJob('00 20 * * * *',function(){
-    // getMachine();
+    getMachine();
     getvirMachine();
   });
   schedule.scheduleJob('00 10 * * * *',function(){
-    // getMachine();
+    getMachine();
     getvirMachine();
   });
   schedule.scheduleJob('00 01 * * * *',function(){
-    // getMachine();
+    getMachine();
     getvirMachine();
   });
 }

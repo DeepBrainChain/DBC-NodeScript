@@ -57,6 +57,103 @@ Select.get('/searchMachine', async (request, response ,next) => {
   } 
 })
 
+// 获取已有的gpu型号列表
+Select.get('/getgpuType', async (request, response ,next) => {
+  let conn = null;
+  try {
+    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+    let test = null
+    test = conn.db("identifier").collection("MachineDetailsInfo")
+    let roomArr = await test.aggregate([{$group:{_id:"$gpuType"}}]).toArray()
+    let arr = []
+    for (let i=0; i<roomArr.length; i++) {
+      arr.push(roomArr[i]._id)
+    }
+    response.json({
+      success: true,
+      code: 10001,
+      msg: '查询成功',
+      content: arr
+    })
+  } catch (error) {
+    response.json({
+      code: -10001,
+      msg:error.message,
+      success: false
+    })
+  } finally {
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
+  } 
+})
+// 通过GPU型号获取机器列表
+Select.post('/getlistByGpu', urlEcode, async (request, response ,next) => {
+  let conn = null;
+  try {
+    const { gpu_type, status, gpu_num } = request.body
+    let pageSize = request.body.pageSize?parseInt(request.body.pageSize):20
+    let pageNum = request.body.pageNum?parseInt(request.body.pageNum):0
+    let perams= [pageSize*pageNum, pageSize]
+    if (gpu_type) {
+      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      let test = conn.db("identifier").collection("MachineDetailsInfo")
+      let arr = []
+      let allArr = []
+      let totalArray = 0
+      let totalOnlineArray = 0
+      if (status && gpu_num && status != '' && gpu_num != '') {
+        arr= await test.find({"gpuType": gpu_type, "gpu_num": gpu_num, "machine_status": status}).skip(perams[0]).limit((perams[1])).toArray()
+        allArr = await test.find({"gpuType": gpu_type, "gpu_num": gpu_num, "machine_status": status}).toArray()
+      } else if (status && status != '') {
+        arr= await test.find({"gpuType": gpu_type, "machine_status": status}).skip(perams[0]).limit((perams[1])).toArray()
+        allArr = await test.find({"gpuType": gpu_type, "machine_status": status}).toArray()
+      } else if (gpu_num && gpu_num != '') {
+        arr= await test.find({"gpuType": gpu_type, "gpu_num": gpu_num}).skip(perams[0]).limit((perams[1])).toArray()
+        allArr = await test.find({"gpuType": gpu_type, "gpu_num": gpu_num}).toArray()
+      } else {
+        arr= await test.find({"gpuType": gpu_type}).skip(perams[0]).limit((perams[1])).toArray()
+        allArr = await test.find({"gpuType": gpu_type}).toArray()
+      }
+      totalArray = await test.find({"gpuType": gpu_type}).toArray()
+      totalOnlineArray = await test.find({"gpuType": gpu_type, machine_status: "online"}).toArray()
+      const total = totalArray.length
+      const onlinetotal = totalOnlineArray.length
+      const typeTotal = allArr.length
+      let data = {
+        list: arr,
+        typeTotal: typeTotal,
+        total: total,
+        online: onlinetotal
+      }
+      response.json({
+        success: true,
+        code: 10001,
+        msg: '查询成功',
+        content: data
+      })
+    } else {
+      response.json({
+        code: -1,
+        msg:'Gpu型号不能为空',
+        success: false
+      })
+    }
+  } catch (error) {
+    response.json({
+      code: -10001,
+      msg:error.message,
+      success: false
+    })
+  } finally {
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
+  } 
+})
+
 // 获取已有的city列表
 Select.get('/getCity', async (request, response ,next) => {
   let conn = null;

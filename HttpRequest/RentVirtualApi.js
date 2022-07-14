@@ -3,8 +3,9 @@ import mongodb from 'mongodb'
 import bodyParser from 'body-parser'
 import { typeJson, wssChain, mongoUrlSeed, baseUrl } from '../publicResource.js'
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
-import { cryptoWaitReady, randomAsU8a, signatureVerify } from '@polkadot/util-crypto';
-import { BN_TEN, u8aToHex } from '@polkadot/util';
+import { cryptoWaitReady, randomAsU8a, signatureVerify, naclBoxKeypairFromSecret, blake2AsHex } from '@polkadot/util-crypto';
+import { BN_TEN, u8aToHex, hexToU8a, stringToU8a } from '@polkadot/util';
+import nacl from 'tweetnacl'
 import httpRequest from 'request-promise';
 import BN from 'bn.js'
 import { decryptByAes256 } from '../testScript/crypto.js'
@@ -94,6 +95,21 @@ const randomWord = () => {
   return str;
 }
 
+// 随机数
+const randomWord1 = () => {
+  let str = "",
+  arr = [
+    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l','m', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L','M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
+  ];
+  for (let i = 0; i < 55; i++) {
+    let pos = Math.round(Math.random() * (arr.length - 1));
+    str += arr[pos];
+  }
+  return str;
+}
+
 // 获取 network_name 名称
 const getnetwork = () => {
   let len = parseInt(Math.random()*5+6,10)
@@ -108,6 +124,14 @@ const getnetwork = () => {
     str += arr[pos];
   }
   return str;
+}
+
+// 加密
+export function naclSeal (message, senderBoxSecret, receiverBoxPublic, nonce) {
+  return {
+    nonce: u8aToHex(nonce),
+    sealed: u8aToHex(nacl.box(message, nonce, receiverBoxPublic, senderBoxSecret))
+  }; 
 }
 
 // 创建账户
@@ -139,6 +163,7 @@ export const transfer = async ( value, seed, toWallet) => {
       events.forEach(({ event: { method, data: [error] } }) => {
         if (error.isModule && method == 'ExtrinsicFailed') {
           console.log('转账失败');
+          transfer(value, seed, toWallet)
         }else if(method == 'ExtrinsicSuccess'){
           console.log('转账成功');
         }
@@ -148,6 +173,12 @@ export const transfer = async ( value, seed, toWallet) => {
   .catch((res)=>{
     console.log(`${res.message}`);
   })
+}
+
+export const getStake = async (wallet) => {
+  await GetApi()
+  let de = await api.query.maintainCommittee.reporterStake(wallet);
+  return de?.toHuman();
 }
 
 // 获取租用虚拟机加价百分比
@@ -169,7 +200,7 @@ rentVirtual.post('/getPercentage', urlEcode, async (request, response ,next) => 
         success: true,
         code: 10001,
         msg: '获取加价成功',
-        content: { percentage: 0 }
+        content: { percentage_signle: 0, percentage_whole: 0 }
       })
     }
   } catch (error) {
@@ -186,7 +217,7 @@ rentVirtual.post('/getPercentage', urlEcode, async (request, response ,next) => 
   }
 })
 
-// 生成临时钱包四位随机数
+// 生成、获取 临时钱包及四位随机数
 rentVirtual.post('/getWallet', urlEcode, async (request, response ,next) => {
   let conn = null;
   try {
@@ -253,12 +284,24 @@ rentVirtual.post('/createVirOrder', urlEcode, async (request, response ,next) =>
         let orderStatus = 0
         let createTime = 0
         let searchHidden = false
+        let ReportHash = ''
+        let ReportNonce = ''
+        let errType = ''
+        let err_desc = ''
+        let reportErr = ''
+        let report_be_punish = false
         let searchOrder = await search.find({_id: id, orderStatus: {$in:[0, 4, 5]}}).toArray()
         if (searchOrder.length) {
           errRefund = searchOrder[0].errRefund ? searchOrder[0].errRefund : false
           orderStatus = searchOrder[0].orderStatus ? searchOrder[0].orderStatus : 0
           createTime = searchOrder[0].createTime ? searchOrder[0].createTime : 0
           searchHidden = searchOrder[0].searchHidden ? searchOrder[0].searchHidden : false
+          ReportHash = searchOrder[0].ReportHash ? searchOrder[0].ReportHash : ''
+          ReportNonce = searchOrder[0].ReportNonce ? searchOrder[0].ReportNonce : ''
+          errType = searchOrder[0].errType ? searchOrder[0].errType : ''
+          err_desc = searchOrder[0].err_desc ? searchOrder[0].err_desc : ''
+          reportErr = searchOrder[0].reportErr ? searchOrder[0].reportErr : 'ending'
+          report_be_punish = searchOrder[0].report_be_punish ? searchOrder[0].report_be_punish : false
           await search.deleteOne({_id: id})
         }
         let data = {...arrinfo, ...{
@@ -273,7 +316,13 @@ rentVirtual.post('/createVirOrder', urlEcode, async (request, response ,next) =>
           orderStatus,
           createTime,
           errRefund,
-          searchHidden
+          searchHidden,
+          ReportHash,
+          ReportNonce,
+          errType,
+          err_desc,
+          reportErr,
+          report_be_punish
         }}
         await search.insertOne(data)
         response.json({
@@ -459,7 +508,7 @@ rentVirtual.post('/getVirtual', urlEcode, async (request, response ,next) => {
     conn = await MongoClient.connect(url, { useUnifiedTopology: true })
     if(wallet) {
       const search = conn.db("identifier").collection("VirtualInfo")
-      let orderArr = await search.find({wallet: wallet, orderStatus: {$in:[2, 3, 4, 5, 6]}, searchHidden: {$ne: true}}).sort({"createTime": -1}).toArray()
+      let orderArr = await search.find({wallet: wallet, orderStatus: {$in:[2, 3, 4, 5, 6]}, searchHidden: {$ne: true}}).project({keyArr: 0}).sort({"createTime": -1}).toArray()
       response.json({
         success: true,
         code: 10001,
@@ -982,11 +1031,21 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
               content: VirInfo.message
             })
           } else {
-            response.json({
-              code: -4,
-              msg: VirInfo.message,
-              success: false
-            })
+            const virtualInfo = conn.db("identifier").collection("VirtualInfo")
+            if (VirInfo.message == 'can not find network info') {
+              await virtualInfo.updateOne({_id: id},{$set:{network_name: ''}})
+              response.json({
+                code: -4,
+                msg: 'Creation failed, please try again later',
+                success: false
+              })
+            } else {
+              response.json({
+                code: -4,
+                msg: VirInfo.message,
+                success: false
+              })
+            }
           }
         } else {
           response.json({
@@ -2073,6 +2132,450 @@ rentVirtual.post('/clearMem', urlEcode, async (request, response ,next) => {
     })
   } finally {
     if (conn != null){
+      conn.close()
+      conn = null
+    }
+  }
+})
+
+
+
+// 举报机器问题
+rentVirtual.post('/reportErr', urlEcode, async (request, response ,next) => {
+  let conn = null;
+  try {
+    const { id, machine_id, errType, err_desc, wallet } = request.body
+    if(id&&machine_id) {
+      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      const getwallet = conn.db("identifier").collection("temporaryWallet")
+      let walletArr = await getwallet.find({_id: id}).toArray()
+      let walletinfo = walletArr[0]
+      const keyArr = naclBoxKeypairFromSecret(hexToU8a(walletinfo.seed))
+      const randomWord = randomWord1()
+      const ReportHash = blake2AsHex((machine_id + randomWord + err_desc), 128)
+      try {
+        let wallet_stake = await getStake(walletinfo.wallet)
+        if (wallet_stake.staked_amount != 0) {
+          await GetApi();
+          let accountFromKeyring = keyring.addFromUri(walletinfo.seed);
+          const siPower = new BN(15)
+          const bob = inputToBn('20000', siPower, 15)
+          await cryptoWaitReady();
+          await api.tx.maintainCommittee
+          .reporterAddStake(bob)
+          .signAndSend( accountFromKeyring ,( { events = [], status  } ) => {
+            if (status.isInBlock) {
+              events.forEach( async ({ event: { method, data: [error] } }) => {
+                if (method == 'ExtrinsicFailed') {
+                  let returnError = error
+                  const decoded = api.registry.findMetaError(returnError.asModule);
+                  response.json({
+                    code: -3,
+                    msg: decoded.method,
+                    success: false
+                  })
+                }else if(method == 'ExtrinsicSuccess'){
+                  let permas = {};
+                  if (errType == 'RentedInaccessible') {
+                    permas['RentedInaccessible'] = `${machine_id}`
+                  } else {
+                    permas[errType] = [ReportHash, u8aToHex(keyArr.publicKey)]
+                  }
+                  await GetApi();
+                  let accountFromKeyring = keyring.addFromUri(walletinfo.seed);
+                  await cryptoWaitReady();
+                  await api.tx.maintainCommittee
+                  .reportMachineFault(permas)
+                  .signAndSend( accountFromKeyring ,( { events = [], status  } ) => {
+                    if (status.isInBlock) {
+                      events.forEach( async ({ event: { method, data: [error] } }) => {
+                        if (method == 'ExtrinsicFailed') {
+                          let returnError = error
+                          const decoded = api.registry.findMetaError(returnError.asModule);
+                          response.json({
+                            code: -3,
+                            msg: decoded.method,
+                            success: false
+                          })
+                        }else if(method == 'ExtrinsicSuccess'){
+                          if (conn == null) {
+                            conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+                          }
+                          const search = conn.db("identifier").collection("VirtualInfo")
+                          await search.updateOne({_id: id}, {$set:{ reportErr: 'processing', ReportHash: ReportHash, ReportNonce: randomWord, err_desc: err_desc, errType: errType}})
+                          response.json({
+                            code: 10001,
+                            msg: '举报成功',
+                            success: true
+                          })
+                        }
+                      });
+                    }
+                  })
+                }
+              });
+            }
+          })
+        } else {
+          let permas = {};
+          if (errType == 'RentedInaccessible') {
+            permas['RentedInaccessible'] = `${machine_id}`
+          } else {
+            permas[errType] = [ReportHash, u8aToHex(keyArr.publicKey)]
+          }
+          await GetApi();
+          let accountFromKeyring = keyring.addFromUri(walletinfo.seed);
+          await cryptoWaitReady();
+          await api.tx.maintainCommittee
+          .reportMachineFault(permas)
+          .signAndSend( accountFromKeyring ,( { events = [], status  } ) => {
+            if (status.isInBlock) {
+              events.forEach( async ({ event: { method, data: [error] } }) => {
+                if (method == 'ExtrinsicFailed') {
+                  let returnError = error
+                  const decoded = api.registry.findMetaError(returnError.asModule);
+                  response.json({
+                    code: -3,
+                    msg: decoded.method,
+                    success: false
+                  })
+                }else if(method == 'ExtrinsicSuccess'){
+                  if (conn == null) {
+                    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+                  }
+                  const search = conn.db("identifier").collection("VirtualInfo")
+                  await search.updateOne({_id: id}, {$set:{ reportErr: 'processing', ReportHash: ReportHash, ReportNonce: randomWord, err_desc: err_desc, errType: errType}})
+                  response.json({
+                    code: 10001,
+                    msg: '举报成功',
+                    success: true
+                  })
+                }
+              });
+            }
+          })
+        }
+      } catch (err) {
+        response.json({
+          code: -2,
+          msg: err.message,
+          success: false
+        })
+      }
+        
+    }else{
+      response.json({
+        code: -1,
+        msg:'参数不能为空',
+        success: false
+      })
+    }
+  } catch (error) {
+    response.json({
+      code: -10001,
+      msg:error.message,
+      success: false
+    })
+  } finally {
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
+  }
+})
+
+// 取消举报
+rentVirtual.post('/reportCancel', urlEcode, async (request, response ,next) => {
+  let conn = null;
+  try {
+    const { id, machine_id, report_id } = request.body
+    if(id&&machine_id) {
+      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      const getwallet = conn.db("identifier").collection("temporaryWallet")
+      let walletArr = await getwallet.find({_id: id}).toArray()
+      let walletinfo = walletArr[0]
+      try {
+        await GetApi();
+        let accountFromKeyring = keyring.addFromUri(walletinfo.seed);
+        await cryptoWaitReady();
+        await api.tx.maintainCommittee
+        .reporterCancelReport(report_id)
+        .signAndSend( accountFromKeyring ,( { events = [], status  } ) => {
+          if (status.isInBlock) {
+            events.forEach( async ({ event: { method, data: [error] } }) => {
+              if (method == 'ExtrinsicFailed') {
+                let returnError = error
+                const decoded = api.registry.findMetaError(returnError.asModule);
+                response.json({
+                  code: -3,
+                  msg: decoded.method,
+                  success: false
+                })
+              } else if(method == 'ExtrinsicSuccess'){
+                if (conn == null) {
+                  conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+                }
+                const search = conn.db("identifier").collection("VirtualInfo")
+                await search.updateOne({_id: id}, {$set:{ reportErr: 'cancal-unstake' }})
+                const wallet_stake = await getStake(walletinfo.wallet)
+                const refundCoin = (wallet_stake.staked_amount*0.6 - wallet_stake.used_stake)/0.6
+                const siPower = new BN(15)
+                const bob = inputToBn(String(refundCoin), siPower, 15)
+                await api.tx.maintainCommittee
+                .reporterReduceStake( bob )
+                .signAndSend( accountFromKeyring , async ( { events = [], status , dispatchError  } ) => {
+                  if (conn == null) {
+                    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+                  }
+                  const search = conn.db("identifier").collection("VirtualInfo")
+                  if (status.isInBlock) {
+                    events.forEach( async ({ event: { method, data: [error] } }) => {
+                      if (error.isModule && method == 'ExtrinsicFailed') {
+                        await search.updateOne({_id: id}, {$set:{ reportErr: 'cancal-unstake-fail' }})
+                        response.json({
+                          code: 10001,
+                          msg: '取消成功，解除质押DBC失败',
+                          content: 'unstake-fail',
+                          success: true
+                        })
+                      }else if(method == 'ExtrinsicSuccess'){
+                        await search.updateOne({_id: id}, {$set:{ reportErr: 'cancal-unstake-success' }})
+                        response.json({
+                          code: 10001,
+                          msg: '取消成功，解除质押DBC成功',
+                          content: 'unstake-success',
+                          success: true
+                        })
+                      }
+                    });
+                  }
+                })
+              }
+            });
+          }
+        })
+      } catch (err) {
+        response.json({
+          code: -2,
+          msg: err.message,
+          success: false
+        })
+      } 
+    }else{
+      response.json({
+        code: -1,
+        msg:'参数不能为空',
+        success: false
+      })
+    }
+  } catch (error) {
+    response.json({
+      code: -10001,
+      msg:error.message,
+      success: false
+    })
+  } finally {
+    if (conn != null) {
+      conn.close()
+      conn = null
+    }
+  }
+})
+
+// 举报30分钟内提交加密信息
+rentVirtual.post('/reportSubmitMsg', urlEcode, async (request, response ,next) => {
+  let conn = null;
+  try {
+    const { id, machine_id, report_id, toWallet, toPub } = request.body
+    if(id&&report_id&&toWallet) {
+      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      const getwallet = conn.db("identifier").collection("temporaryWallet")
+      const Vir = conn.db("identifier").collection("VirtualInfo")
+      const session = conn.db("identifier").collection("sessionInfo")
+      let walletArr = await getwallet.find({_id: id}).toArray()
+      let walletinfo = walletArr[0]
+      let VirArr = await Vir.find({_id: id}).toArray()
+      let virInfo = VirArr[0]
+      let sessArr = await session.find({_id: id}).toArray()
+      let sessInfo = sessArr[0]
+      // 加密需要给用户的信息，赋值给 encrypted_err_info，需要提供  machine_id + 报告人随机字符串 + 错误信息
+      let perams = {
+        machine_id: machine_id,
+        err_reason: virInfo.err_desc,
+        session_id: sessInfo.session_id,
+        session_id_sign: sessInfo.session_id_sign,
+        report_rand_str: virInfo.ReportNonce
+      }
+      let message = stringToU8a(JSON.stringify(perams));
+      const keyArr = naclBoxKeypairFromSecret(hexToU8a(walletinfo.seed))
+      let nonce = hexToU8a('0x8d842da497f095e0d0afb969e3a7cb51e77d76dc97343dfc')
+      const str_Sealed = naclSeal( message, keyArr.secretKey, hexToU8a(toPub), nonce ); 
+      try {
+        await GetApi();
+        let accountFromKeyring = keyring.addFromUri(walletinfo.seed);
+        await cryptoWaitReady();
+        await api.tx.maintainCommittee
+        .reporterAddEncryptedErrorInfo(report_id, toWallet, str_Sealed.sealed)
+        .signAndSend( accountFromKeyring ,( { events = [], status  } ) => {
+          if (status.isInBlock) {
+            events.forEach( async ({ event: { method, data: [error] } }) => {
+              if (method == 'ExtrinsicFailed') {
+                let returnError = error
+                const decoded = api.registry.findMetaError(returnError.asModule);
+                response.json({
+                  code: -3,
+                  msg: decoded.method,
+                  success: false
+                })
+              }else if(method == 'ExtrinsicSuccess'){
+                if (conn == null) {
+                  conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+                }
+                response.json({
+                  code: 10001,
+                  msg: '发动成功',
+                  success: true
+                })
+              }
+            });
+          }
+        })
+      } catch (err) {
+        response.json({
+          code: -2,
+          msg: err.message,
+          success: false
+        })
+      }
+        
+    }else{
+      response.json({
+        code: -1,
+        msg:'参数不能为空',
+        success: false
+      })
+    }
+  } catch (error) {
+    response.json({
+      code: -10001,
+      msg:error.message,
+      success: false
+    })
+  } finally {
+    if (conn != null){
+      conn.close()
+      conn = null
+    }
+  }
+})
+
+// 举报订单以处理完毕 或 处于惩罚中
+rentVirtual.post('/reportFinish', urlEcode, async (request, response ,next) => {
+  let conn = null;
+  try {
+    const { id, status } = request.body
+    if(id) {
+      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      const search = conn.db("identifier").collection("VirtualInfo")
+      if (status == 'error') {
+        await search.updateOne({_id: id}, {$set:{ reportErr: 'ending', report_be_punish: true }})
+      } else if (status == 'end') {
+        await search.updateOne({_id: id}, {$set:{ reportErr: 'ending-over' }})
+      } else {
+        await search.updateOne({_id: id}, {$set:{ reportErr: 'ending' }})
+      }
+      response.json({
+        code: 10001,
+        msg: '修改状态成功',
+        success: true
+      })
+    }else{
+      response.json({
+        code: -1,
+        msg:'参数不能为空',
+        success: false
+      })
+    }
+  } catch (error) {
+    response.json({
+      code: -10001,
+      msg:error.message,
+      success: false
+    })
+  } finally {
+    if (conn != null) {
+      conn.close()
+      conn = null
+    }
+  }
+})
+
+// 举报退币
+rentVirtual.post('/reportRefund', urlEcode, async (request, response ,next) => {
+  let conn = null;
+  try {
+    const { id, wallet } = request.body
+    if (id&&wallet) {
+      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      const getwallet = conn.db("identifier").collection("temporaryWallet")
+      let walletArr = await getwallet.find({_id: id}).toArray()
+      let walletinfo = walletArr[0]
+      const siPower = new BN(15)
+      const bob = inputToBn('20000', siPower, 15)
+      await GetApi();
+      let accountFromKeyring = keyring.addFromUri(walletinfo.seed);
+      await cryptoWaitReady();
+      await api.tx.balances
+      .transfer( wallet, bob )
+      .signAndSend( accountFromKeyring , ( { events = [], status , dispatchError  } ) => {
+        if (status.isInBlock) {
+          events.forEach( async ({ event: { method, data: [error] } }) => {
+            if (error.isModule && method == 'ExtrinsicFailed') {
+              response.json({
+                success: false,
+                code: -3,
+                msg: 'DBC退币失败，请联系客服处理',
+                content: id
+              })
+              if (conn != null){
+                conn.close()
+                conn = null
+              }
+            }else if(method == 'ExtrinsicSuccess'){
+              if (conn == null) {
+                conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+              }
+              const search = conn.db("identifier").collection("VirtualInfo")
+              await search.updateOne({_id: id}, {$set:{ reportErr: 'ending-cancel' }})
+              response.json({
+                success: true,
+                code: 10001,
+                msg: 'DBC已退回原账户',
+                content: id
+              })
+              if (conn != null){
+                conn.close()
+                conn = null
+              }
+            }
+          });
+        }
+      })
+    } else {
+      response.json({
+        code: -1,
+        msg:'参数不能为空',
+        success: false
+      })
+    }
+  } catch (error) {
+    response.json({
+      code: -10001,
+      msg:error.message,
+      success: false
+    })
+  } finally {
+    if (conn != null) {
       conn.close()
       conn = null
     }

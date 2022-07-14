@@ -363,7 +363,7 @@ signleRentVir.post('/createSignleVirOrder', urlEcode, async (request, response ,
           port_min: port_min,
           port_max: port_max,
           rdp_port: rdp_port,
-          use_sshOrrdp: ssh_port != '' ? ssh_port : rdp_port,
+          use_sshOrrdp: ssh_port ? ssh_port : rdp_port,
           use_port_min: port_min,
           use_vnc: vnc_port,
           dbc: dbc,
@@ -386,7 +386,7 @@ signleRentVir.post('/createSignleVirOrder', urlEcode, async (request, response ,
           await task.insertOne({
             _id: randomWord7(),
             belong: machine_id,
-            use_sshOrrdp: ssh_port != '' ? ssh_port : rdp_port,
+            use_sshOrrdp: ssh_port ? ssh_port : rdp_port,
             message: VirInfo.message
           })
           response.json({

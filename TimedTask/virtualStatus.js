@@ -42,6 +42,17 @@ export const inputToBn = (input, siPower, basePower) => {
 }
 
 /**
+ * machinesInfo 查询钱包的余额
+ * @param permas
+ */
+ export const getbalance = async (wallet) => {
+  await GetApi()
+  const data = await api.query.system.account(wallet)
+  const balance = data.toJSON();
+  return balance.data.free / Math.pow(10, 15)
+}
+
+/**
  * machinesInfo 根据机器id查询机器状态 Online Creating Rented
  * @param permas
  */
@@ -50,6 +61,17 @@ export const inputToBn = (input, siPower, basePower) => {
   const info = await api.query.onlineProfile.machinesInfo(machineId)
   return info.toHuman()
 }
+
+/**
+ * machinesInfo 根据机器id查询机器租用状态 Online Creating Rented
+ * @param permas
+ */
+ export const rentOrder = async (machineId) => {
+  await GetApi()
+  const info = await api.query.rentMachine.rentOrder(machineId)
+  return info.toHuman()
+}
+
 
 const checkVirtualStatus = async () => {
   try {
@@ -66,7 +88,7 @@ const checkVirtualStatus = async () => {
     let orderArr5 = await Info.find({orderStatus: 5}).toArray() // 查询订单中取消的订单
     let orderArr6 = await Info.find({errRefund: true}).toArray() // 查询退币失败的订单
     for(let i = 0; i < orderArr1.length; i++){
-      if (orderArr1[i].createTime + 30*60*1000 < Date.now()) {
+      if (orderArr1[i].createTime + 15*60*1000 < Date.now()) {
         await Info.updateOne({_id: orderArr1[i]._id}, {$set:{orderStatus: 6, network_name: ''}})
         await GetApi()
         let walletArr = await wallet.find({_id: orderArr1[i]._id}).toArray()
@@ -108,7 +130,7 @@ const checkVirtualStatus = async () => {
         // }
       }
     }
-    for(let i = 0; i < orderArr3.length; i++){ // 9天删除数据库中对应的结束订单虚拟机
+    for(let i = 0; i < orderArr3.length; i++){ // 9天删除数据库中对应的结束订单虚拟机 / 订单结束两天后如果含有举报质押的订单，接触剩余质押退币给用户
       await virInfo.updateMany({ belong: orderArr3[i]._id }, {$set:{status: 'closed'}})
       await getSession.deleteOne({ _id: orderArr3[i]._id })
       if ((orderArr3[i].createTime + orderArr3[i].day*24*60*60*1000 + 777600000) < Date.now()) {
@@ -120,6 +142,29 @@ const checkVirtualStatus = async () => {
           }
         }
         await virInfo.deleteMany({ belong: orderArr3[i]._id })
+      }
+      if (orderArr3[i].reportErr.indexOf('ending') != -1) {
+        let walletArr = await wallet.find({_id: orderArr3[i]._id}).toArray()
+        let walletinfo = walletArr[0]
+        const wallet_stake = await getStake(walletinfo.wallet)
+        const refundCoin = (wallet_stake.staked_amount*0.6 - wallet_stake.used_stake)/0.6
+        const siPower = new BN(15)
+        const bob = inputToBn(String(refundCoin), siPower, 15)
+        await api.tx.maintainCommittee
+        .reporterReduceStake( bob )
+        .signAndSend( accountFromKeyring , async ( { events = [], status , dispatchError  } ) => {
+          if (conn == null) {
+            conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+          }
+          const search = conn.db("identifier").collection("VirtualInfo")
+          if (status.isInBlock) {
+            events.forEach( async ({ event: { method, data: [error] } }) => {
+              if (method == 'ExtrinsicSuccess') {
+                await search.updateOne({_id: id}, {$set:{ reportErr: 'cancal-unstake-success' }})
+              }
+            });
+          }
+        })
       }
     }
     for(let i = 0; i < orderArr5.length; i++){ // 9天删除数据库中对应的取消订单虚拟机
@@ -143,30 +188,48 @@ const checkVirtualStatus = async () => {
       await GetApi()
       let walletArr = await wallet.find({_id: orderArr4[i]._id}).toArray()
       let walletinfo = walletArr[0]
-      let accountFromKeyring = await keyring.addFromUri(walletinfo.seed);
-      const siPower = new BN(15)
-      const bob = inputToBn(String(orderArr4[i].dbc-10), siPower, 15)
-      await cryptoWaitReady();
-      await api.tx.balances
-      .transfer( orderArr4[i].wallet, bob )
-      .signAndSend( accountFromKeyring , ( { events = [], status , dispatchError  } ) => {
-        if (status.isInBlock) {
-          events.forEach( async ({ event: { method, data: [error] } }) => {
-            console.log(method, 'orderStatus: 6');
-            if(method == 'ExtrinsicSuccess'){
-              let Info1 = null
-              let conn1 = null
-              conn1 = await MongoClient.connect(url, { useUnifiedTopology: true })
-              Info1 = conn1.db("identifier").collection("VirtualInfo")
-              await Info1.updateOne({_id: orderArr4[i]._id}, {$set:{orderStatus: 5, network_name: ''}}) // 订单取消
-              if (conn1 != null){
-                conn1.close()
-                conn1 = null
+      let balance  = await getbalance(walletinfo.wallet)
+      if ( balance > (orderArr4[i].dbc - 20)) {
+        let accountFromKeyring = await keyring.addFromUri(walletinfo.seed);
+        const siPower = new BN(15)
+        const bob = inputToBn(String(orderArr4[i].dbc-10), siPower, 15)
+        await cryptoWaitReady();
+        await api.tx.balances
+        .transfer( orderArr4[i].wallet, bob )
+        .signAndSend( accountFromKeyring , ( { events = [], status , dispatchError  } ) => {
+          if (status.isInBlock) {
+            events.forEach( async ({ event: { method, data: [error] } }) => {
+              console.log(method, 'orderStatus: 6');
+              if(method == 'ExtrinsicSuccess'){
+                let Info1 = null
+                let conn1 = null
+                conn1 = await MongoClient.connect(url, { useUnifiedTopology: true })
+                Info1 = conn1.db("identifier").collection("VirtualInfo")
+                await Info1.updateOne({_id: orderArr4[i]._id}, {$set:{orderStatus: 5, network_name: ''}}) // 订单取消
+                if (conn1 != null){
+                  conn1.close()
+                  conn1 = null
+                }
               }
-            }
-          });
+            });
+          }
+        })
+      } else {
+        let Info1 = null
+        let conn1 = null
+        conn1 = await MongoClient.connect(url, { useUnifiedTopology: true })
+        Info1 = conn1.db("identifier").collection("VirtualInfo")
+        const rentOrd = await rentOrder(orderArr4[i].machine_id)
+        if (rentOrd.rent_status == 'Renting' && rentOrd.renter == walletinfo.wallet) {
+          await Info1.updateOne({_id: orderArr4[i]._id}, {$set:{orderStatus: 3}}) // 订单出错，但已被租用
+        } else {
+          await Info1.updateOne({_id: orderArr4[i]._id}, {$set:{orderStatus: 5, network_name: ''}}) // 订单取消
         }
-      })
+        if (conn1 != null){
+          conn1.close()
+          conn1 = null
+        }
+      }
     }
     for(let i = 0; i < orderArr6.length; i++){
       await GetApi()
