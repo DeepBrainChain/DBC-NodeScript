@@ -178,7 +178,12 @@ export const transfer = async ( value, seed, toWallet) => {
 export const getStake = async (wallet) => {
   await GetApi()
   let de = await api.query.maintainCommittee.reporterStake(wallet);
-  return de?.toHuman();
+  let de_data =  de.toJSON();
+  let returnData = {
+    staked_amount: de_data.staked_amount / Math.pow(10, 15),
+    used_stake: de_data.used_stake / Math.pow(10, 15)
+  }
+  return returnData
 }
 
 // 获取租用虚拟机加价百分比
@@ -289,7 +294,6 @@ rentVirtual.post('/createVirOrder', urlEcode, async (request, response ,next) =>
         let errType = ''
         let err_desc = ''
         let reportErr = ''
-        let report_be_punish = false
         let searchOrder = await search.find({_id: id, orderStatus: {$in:[0, 4, 5]}}).toArray()
         if (searchOrder.length) {
           errRefund = searchOrder[0].errRefund ? searchOrder[0].errRefund : false
@@ -301,7 +305,6 @@ rentVirtual.post('/createVirOrder', urlEcode, async (request, response ,next) =>
           errType = searchOrder[0].errType ? searchOrder[0].errType : ''
           err_desc = searchOrder[0].err_desc ? searchOrder[0].err_desc : ''
           reportErr = searchOrder[0].reportErr ? searchOrder[0].reportErr : 'ending'
-          report_be_punish = searchOrder[0].report_be_punish ? searchOrder[0].report_be_punish : false
           await search.deleteOne({_id: id})
         }
         let data = {...arrinfo, ...{
@@ -321,8 +324,7 @@ rentVirtual.post('/createVirOrder', urlEcode, async (request, response ,next) =>
           ReportNonce,
           errType,
           err_desc,
-          reportErr,
-          report_be_punish
+          reportErr
         }}
         await search.insertOne(data)
         response.json({
@@ -2478,11 +2480,11 @@ rentVirtual.post('/reportFinish', urlEcode, async (request, response ,next) => {
       conn = await MongoClient.connect(url, { useUnifiedTopology: true })
       const search = conn.db("identifier").collection("VirtualInfo")
       if (status == 'error') {
-        await search.updateOne({_id: id}, {$set:{ reportErr: 'ending', report_be_punish: true }})
+        await search.updateOne({_id: id}, {$set:{ reportErr: 'ending-punish'}})
       } else if (status == 'end') {
         await search.updateOne({_id: id}, {$set:{ reportErr: 'ending-over' }})
       } else {
-        await search.updateOne({_id: id}, {$set:{ reportErr: 'ending' }})
+        await search.updateOne({_id: id}, {$set:{ reportErr: 'ending-over' }})
       }
       response.json({
         code: 10001,
@@ -2546,7 +2548,7 @@ rentVirtual.post('/reportRefund', urlEcode, async (request, response ,next) => {
                 conn = await MongoClient.connect(url, { useUnifiedTopology: true })
               }
               const search = conn.db("identifier").collection("VirtualInfo")
-              await search.updateOne({_id: id}, {$set:{ reportErr: 'ending-cancel' }})
+              await search.updateOne({_id: id}, {$set:{ reportErr: 'cancal-success' }})
               response.json({
                 success: true,
                 code: 10001,

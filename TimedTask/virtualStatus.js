@@ -62,6 +62,17 @@ export const inputToBn = (input, siPower, basePower) => {
   return info.toHuman()
 }
 
+export const getStake = async (wallet) => {
+  await GetApi()
+  let de = await api.query.maintainCommittee.reporterStake(wallet);
+  let de_data =  de.toJSON();
+  let returnData = {
+    staked_amount: de_data.staked_amount / Math.pow(10, 15),
+    used_stake: de_data.used_stake / Math.pow(10, 15)
+  }
+  return returnData
+}
+
 /**
  * machinesInfo 根据机器id查询机器租用状态 Online Creating Rented
  * @param permas
@@ -143,28 +154,61 @@ const checkVirtualStatus = async () => {
         }
         await virInfo.deleteMany({ belong: orderArr3[i]._id })
       }
-      if (orderArr3[i].reportErr.indexOf('ending') != -1) {
+      if ((orderArr3[i].createTime + orderArr3[i].day*24*60*60*1000 + 172800000) < Date.now()) {
+        await GetApi();
         let walletArr = await wallet.find({_id: orderArr3[i]._id}).toArray()
         let walletinfo = walletArr[0]
-        const wallet_stake = await getStake(walletinfo.wallet)
-        const refundCoin = (wallet_stake.staked_amount*0.6 - wallet_stake.used_stake)/0.6
-        const siPower = new BN(15)
-        const bob = inputToBn(String(refundCoin), siPower, 15)
-        await api.tx.maintainCommittee
-        .reporterReduceStake( bob )
-        .signAndSend( accountFromKeyring , async ( { events = [], status , dispatchError  } ) => {
-          if (conn == null) {
-            conn = await MongoClient.connect(url, { useUnifiedTopology: true })
-          }
-          const search = conn.db("identifier").collection("VirtualInfo")
-          if (status.isInBlock) {
-            events.forEach( async ({ event: { method, data: [error] } }) => {
-              if (method == 'ExtrinsicSuccess') {
-                await search.updateOne({_id: id}, {$set:{ reportErr: 'cancal-unstake-success' }})
-              }
-            });
-          }
-        })
+        let accountFromKeyring = keyring.addFromUri(walletinfo.seed);
+        if (orderArr3[i].reportErr.indexOf('ending') != -1) {
+          const wallet_stake = await getStake(walletinfo.wallet)
+          const refundCoin = (wallet_stake.staked_amount*0.6 - wallet_stake.used_stake)/0.6
+          const siPower = new BN(15)
+          const bob = inputToBn(String(refundCoin), siPower, 15)
+          await cryptoWaitReady()
+          await api.tx.maintainCommittee
+          .reporterReduceStake( bob )
+          .signAndSend( accountFromKeyring , async ( { events = [], status , dispatchError  } ) => {
+            if (conn == null) {
+              conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+            }
+            const search = conn.db("identifier").collection("VirtualInfo")
+            if (status.isInBlock) {
+              events.forEach( async ({ event: { method, data: [error] } }) => {
+                if (method == 'ExtrinsicSuccess') {
+                  await search.updateOne({_id: orderArr3[i]._id}, {$set:{ reportErr: 'cancal-unstake-success', refundCoin: refundCoin}})
+                  if (conn != null){
+                    conn.close()
+                    conn = null
+                  }
+                }
+              })
+            }
+          })
+        }
+        if (orderArr3[i].reportErr == 'cancal-unstake-success' && orderArr3[i].refundCoin) {
+          const siPower = new BN(15)
+          const bob = inputToBn(String(orderArr3[i].refundCoin), siPower, 15)
+          await cryptoWaitReady()
+          await api.tx.balances
+          .transfer( orderArr3[i].wallet, bob )
+          .signAndSend( accountFromKeyring , ( { events = [], status , dispatchError  } ) => {
+            if (status.isInBlock) {
+              events.forEach( async ({ event: { method, data: [error] } }) => {
+                if(method == 'ExtrinsicSuccess'){
+                  if (conn == null) {
+                    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+                  }
+                  const search = conn.db("identifier").collection("VirtualInfo")
+                  await search.updateOne({_id: orderArr3[i]._id}, {$set:{ reportErr: '', refundCoin: ''}})
+                  if (conn != null){
+                    conn.close()
+                    conn = null
+                  }
+                }
+              })
+            }
+          })
+        }
       }
     }
     for(let i = 0; i < orderArr5.length; i++){ // 9天删除数据库中对应的取消订单虚拟机

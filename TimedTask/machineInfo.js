@@ -11,6 +11,7 @@ const MongoClient = mongodb.MongoClient;
 const url = mongoUrl;
 let api  = null
 let conn = null
+let conn1 = null
 // 测试链上交互
 export const GetApi = async () =>{
   if (!api) {
@@ -153,12 +154,12 @@ const getMachine = async () => {
 const getvirMachine = async () => {
   // 获取添加到租用虚拟机的机器
   try {
-    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
-    const virMachine = conn.db("identifier").collection("virMachine")
-    const test = conn.db("identifier").collection("machineInfo")
-    const virMacInfo = conn.db("identifier").collection("virMachineInfo")
+    conn1 = await MongoClient.connect(url, { useUnifiedTopology: true })
+    const virMachine = conn1.db("identifier").collection("virMachine")
+    const test = conn1.db("identifier").collection("MachineDetailsInfo")
+    const virMacInfo = conn1.db("identifier").collection("virMachineInfo")
     const virArr = await virMachine.find({'_id': 'virtual_machine_list'}).toArray()
-    const vir_machinelist = virArr[0].machineList
+    const vir_machinelist = virArr[0] ? virArr[0].machineList : []
     if (vir_machinelist.length) {
       for (let i= 0; i< vir_machinelist.length; i++) {
         let block = await getBlockTime('chain')
@@ -208,9 +209,9 @@ const getvirMachine = async () => {
   } catch (error) {
     console.log(error, 'getvirMachine')
   } finally {
-    if (conn != null){
-      conn.close()
-      conn = null
+    if (conn1 != null){
+      conn1.close()
+      conn1 = null
     }
   }
 }
