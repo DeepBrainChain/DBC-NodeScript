@@ -386,6 +386,7 @@ rentVirtual.post('/rentmachine', urlEcode, async (request, response ,next) => {
     if(id) {
       const search = conn.db("identifier").collection("VirtualInfo")
       const wallet = conn.db("identifier").collection("temporaryWallet")
+      const machineInfo = conn.db("identifier").collection("MachineDetailsInfo")
       await search.updateOne({_id: id}, {$set:{orderStatus: 1}})
       let orderArr = await search.find({_id: id}).toArray()
       let orderinfo = orderArr[0]
@@ -439,6 +440,7 @@ rentVirtual.post('/rentmachine', urlEcode, async (request, response ,next) => {
               })
             }else if(method == 'ExtrinsicSuccess'){
               await search.updateOne({_id: id}, {$set:{orderStatus: 2, searchHidden: false, createTime: Date.now()}})
+              await machineInfo.updateOne({_id: orderinfo.machine_id}, {$set:{machine_status: 'creating'}})
               response.json({
                 success: true,
                 code: 10001,
