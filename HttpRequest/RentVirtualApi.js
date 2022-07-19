@@ -126,6 +126,20 @@ const getnetwork = () => {
   return str;
 }
 
+const createTaskId = () => {
+  let str = "",
+  arr = [
+    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l','m', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+    'A', '1', '2', '3', '4', '5', '6', '7', '8', '9'
+  ];
+  for (let i = 0; i < 21; i++) {
+    let pos = Math.round(Math.random() * (arr.length - 1));
+    str += arr[pos];
+  }
+  return '7' + str;
+}
+
+
 // 加密
 export function naclSeal (message, senderBoxSecret, receiverBoxPublic, nonce) {
   return {
@@ -955,10 +969,12 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
         if (!NonceInfo.length) {
           await searchNonce.insertOne({ nonce: nonce, wallet: wallet, belong: 'rentvirtual' })
           const getwallet = conn.db("identifier").collection("temporaryWallet")
+          const task = conn.db("identifier").collection("virtualTask")
           let walletArr = await getwallet.find({_id: id}).toArray()
           let walletinfo = walletArr[0]
           let { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
           let VirInfo = {}
+          const task_id = createTaskId()
           try {
             VirInfo = await httpRequest({
               url: baseUrl + "/api/v1/tasks/start",
@@ -968,6 +984,7 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
               body: {
                 "peer_nodes_list": [machine_id], 
                 "additional": {
+                  "task_id": task_id,
                   "ssh_port": String(ssh_port),
                   "custom_port": [`tcp,${port_min}-${port_max}`,`udp,${port_min}-${port_max}`],
                   "image_name": String(image_name),
@@ -995,6 +1012,17 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
               message: err.message
             }
           }
+          await task.insertOne({
+            _id: task_id,
+            belong: id,
+            images: image_name,
+            port_min: port_min,
+            port_max: port_max,
+            rdp_port: rdp_port,
+            network_sec: network_sec,
+            network_Id: network_Id,
+            task_id: task_id
+          })
           if (VirInfo.errcode != undefined || VirInfo.errcode != null) {
             VirInfo = VirInfo
           } else {
@@ -1009,23 +1037,28 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
             }
           }
           if (VirInfo&&VirInfo.errcode == 0) {
-            const task = conn.db("identifier").collection("virtualTask")
             const security = conn.db("identifier").collection("securityGroup")
             if (network_Id) {
               let SGarr = await security.find({_id: network_Id}).toArray()
               await security.updateOne({_id: network_Id}, {$set: {bindVM: SGarr[0].bindVM + 1}})
             }
-            await task.insertOne({
-              _id: VirInfo.message.task_id,
-              belong: id,
-              images: image_name,
-              port_min: port_min,
-              port_max: port_max,
-              rdp_port: rdp_port,
-              network_sec: network_sec,
-              network_Id: network_Id,
-              ...VirInfo.message
-            })
+            if (task_id == VirInfo.message.task_id) {
+              await task.updateOne({ _id: VirInfo.message.task_id }, {$set: {...VirInfo.message}})
+            } else {
+              await task.deleteOne({_id: task_id})
+              await task.insertOne({
+                _id: VirInfo.message.task_id,
+                belong: id,
+                images: image_name,
+                port_min: port_min,
+                port_max: port_max,
+                rdp_port: rdp_port,
+                network_sec: network_sec,
+                network_Id: network_Id,
+                // multicast: JSON.parse(multicast),
+                ...VirInfo.message
+              })
+            }
             response.json({
               code: 10001,
               msg: '创建中',
