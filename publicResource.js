@@ -433,7 +433,7 @@ export const wssChain = {
 // export const baseUrl = 'http://115.231.234.37:5052' // 聪图云私链端口
 // export const baseUrl = 'http://115.231.234.32:5052' // 主网测试端口
 // export const baseUrl = 'http://119.145.254.119:5034' // 综合端口号
-export const baseUrl = 'http://119.145.254.118:5033' // 综合端口号
+export const baseUrl = 'http://119.6.235.171:5022' // 综合端口号
 // export const baseUrl = 'http://115.231.234.34:5052' // 主网端口
 
 /**
@@ -466,9 +466,9 @@ export const mongoUrlSeed = 'ba22370884954c456be7fc10cbae7a652fbadfb64e4ab9aab4a
 export const designatedWallet = '5F7L9bc3q4XdhVstJjVB2o7S8RHz2YKsHUB6k3uQpErTmVWu' // 手续费指定钱包
 
 /**
+ * forever start -o http-out.log -e http-err.log router.js
  * forever start -o transferOutFee-out.log -e transferOutFee-err.log transferOutFee.js
  * forever start -o virtualStatus-out.log -e virtualStatus-err.log virtualStatus.js
- * forever start -o http-out.log -e http-err.log router.js
  * forever start -o reviewReward-out.log -e reviewReward-err.log ReviewRewards.js
  * forever start -o verification-out.log -e verification-err.log VerificationMachine.js
  * forever start -o machine-out.log -e machine-err.log machineInfo.js

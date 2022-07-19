@@ -2404,8 +2404,8 @@ rentVirtual.post('/reportSubmitMsg', urlEcode, async (request, response ,next) =
       let perams = {
         machine_id: machine_id,
         err_reason: virInfo.err_desc,
-        session_id: sessInfo.session_id,
-        session_id_sign: sessInfo.session_id_sign,
+        session_id: sessInfo ? sessInfo.session_id : 'undefined',
+        session_id_sign: sessInfo ? sessInfo.session_id_sign : 'undefined',
         report_rand_str: virInfo.ReportNonce
       }
       let message = stringToU8a(JSON.stringify(perams));
