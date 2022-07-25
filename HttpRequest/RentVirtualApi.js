@@ -806,112 +806,112 @@ rentVirtual.post('/createNetwork', urlEcode, async (request, response ,next) => 
   let conn = null;
   try {
     const { machine_id, wallet, server_room } = request.body
-    if(id) {
+    if(machine_id&&wallet&&server_room) {
       conn = await MongoClient.connect(url, { useUnifiedTopology: true })
       const networkInfo = conn.db("identifier").collection("networkInfo")
       const getwallet = conn.db("identifier").collection("temporaryWallet")
-      const walletArr = await getwallet.find({_id: id}).toArray()
+      const walletArr = await getwallet.find({_id: machine_id+wallet}).toArray()
       const walletinfo = walletArr[0]
       let netArr = await networkInfo.find({ _id: (server_room + wallet) }).toArray()
       if (netArr.length) {
         const netInfo = netArr[0]
-        let searchNet = {}
-        const { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
-        try {
-          searchNet = await httpRequest({
-            url: baseUrl + `/api/v1/lan/${netInfo.network_name}`,
-            method: "post",
-            json: true,
-            headers: {},
-            body: {
-              "peer_nodes_list": [machine_id], 
-              "additional": {},
-              "nonce": nonce1,
-              "sign": sign1,
-              "wallet": walletinfo.wallet
-            }
-          })
-        } catch (err) {
-          searchNet = {
-            message: err.message
-          }
-        }
-        if (searchNet.errcode != undefined || searchNet.errcode != null) {
-          searchNet = searchNet
-        } else {
-          if (searchNet.netcongtu || searchNet.mainnet) {
-            if (machine_id.indexOf('CTC') != -1) {
-              searchNet = searchNet.netcongtu
-            } else {
-              searchNet = searchNet.mainnet
-            }
-          } else {
-            searchNet = searchNet
-          }
-        }
-        if (searchNet&&searchNet.errcode == 0) {
+        // let searchNet = {}
+        // const { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
+        // try {
+        //   searchNet = await httpRequest({
+        //     url: baseUrl + `/api/v1/lan/${netInfo.network_name}`,
+        //     method: "post",
+        //     json: true,
+        //     headers: {},
+        //     body: {
+        //       "peer_nodes_list": [machine_id], 
+        //       "additional": {},
+        //       "nonce": nonce1,
+        //       "sign": sign1,
+        //       "wallet": walletinfo.wallet
+        //     }
+        //   })
+        // } catch (err) {
+        //   searchNet = {
+        //     message: err.message
+        //   }
+        // }
+        // if (searchNet.errcode != undefined || searchNet.errcode != null) {
+        //   searchNet = searchNet
+        // } else {
+        //   if (searchNet.netcongtu || searchNet.mainnet) {
+        //     if (machine_id.indexOf('CTC') != -1) {
+        //       searchNet = searchNet.netcongtu
+        //     } else {
+        //       searchNet = searchNet.mainnet
+        //     }
+        //   } else {
+        //     searchNet = searchNet
+        //   }
+        // }
+        // if (searchNet&&searchNet.errcode == 0) {
           response.json({
             code: 10001,
             msg: '已存在网络名称',
             success: true,  
             content: netInfo.network_name
           })
-        } else {
-          await networkInfo.deleteOne({ _id: (server_room + wallet)})
-          const { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
-          const network_name = getnetwork();
-          let VirInfo = {}
-          try {
-            VirInfo = await httpRequest({
-              url: baseUrl + "/api/v1/lan/create",
-              method: "post",
-              json: true,
-              headers: {},
-              body: {
-                "peer_nodes_list": [machine_id], 
-                "additional": {
-                  "network_name": network_name,
-                  "ip_cidr": "192.168.66.0/24"
-                },
-                "nonce": nonce1,
-                "sign": sign1,
-                "wallet": walletinfo.wallet
-              }
-            })
-          } catch (err) {
-            VirInfo = {
-              message: err.message
-            }
-          }
-          if (VirInfo.errcode != undefined || VirInfo.errcode != null) {
-            VirInfo = VirInfo
-          } else {
-            if (VirInfo.netcongtu || VirInfo.mainnet) {
-              if (machine_id.indexOf('CTC') != -1) {
-                VirInfo = VirInfo.netcongtu
-              } else {
-                VirInfo = VirInfo.mainnet
-              }
-            } else {
-              VirInfo = VirInfo
-            }
-          }
-          if (VirInfo&&VirInfo.errcode == 0) {
-            await networkInfo.insertOne({ _id: (server_room + wallet), network_name: network_name })
-            response.json({
-              code: 10001,
-              msg: '获取网络名称成功',
-              success: true,
-              content: network_name
-            })
-          } else {
-            response.json({
-              code: -2,
-              msg: VirInfo.message,
-              success: false
-            })
-          }
-        }
+        // } else {
+        //   await networkInfo.deleteOne({ _id: (server_room + wallet)})
+        //   const { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
+        //   const network_name = getnetwork();
+        //   let VirInfo = {}
+        //   try {
+        //     VirInfo = await httpRequest({
+        //       url: baseUrl + "/api/v1/lan/create",
+        //       method: "post",
+        //       json: true,
+        //       headers: {},
+        //       body: {
+        //         "peer_nodes_list": [machine_id], 
+        //         "additional": {
+        //           "network_name": network_name,
+        //           "ip_cidr": "192.168.66.0/24"
+        //         },
+        //         "nonce": nonce1,
+        //         "sign": sign1,
+        //         "wallet": walletinfo.wallet
+        //       }
+        //     })
+        //   } catch (err) {
+        //     VirInfo = {
+        //       message: err.message
+        //     }
+        //   }
+        //   if (VirInfo.errcode != undefined || VirInfo.errcode != null) {
+        //     VirInfo = VirInfo
+        //   } else {
+        //     if (VirInfo.netcongtu || VirInfo.mainnet) {
+        //       if (machine_id.indexOf('CTC') != -1) {
+        //         VirInfo = VirInfo.netcongtu
+        //       } else {
+        //         VirInfo = VirInfo.mainnet
+        //       }
+        //     } else {
+        //       VirInfo = VirInfo
+        //     }
+        //   }
+        //   if (VirInfo&&VirInfo.errcode == 0) {
+        //     await networkInfo.insertOne({ _id: (server_room + wallet), network_name: network_name })
+        //     response.json({
+        //       code: 10001,
+        //       msg: '获取网络名称成功',
+        //       success: true,
+        //       content: network_name
+        //     })
+        //   } else {
+        //     response.json({
+        //       code: -2,
+        //       msg: VirInfo.message,
+        //       success: false
+        //     })
+        //   }
+        // }
       } else {
         const { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
         const network_name = getnetwork();
@@ -1109,7 +1109,8 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
       nonce, 
       sign, 
       wallet,
-      network_name,
+      // network_name,
+      networkId,
       data_file_name,
       public_ip,
       network_sec,
@@ -1125,6 +1126,8 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
         if (!NonceInfo.length) {
           await searchNonce.insertOne({ nonce: nonce, wallet: wallet, belong: 'rentvirtual' })
           const getwallet = conn.db("identifier").collection("temporaryWallet")
+          const network = conn.db("identifier").collection("networkInfo")
+          const networkArr = await network.find({_id: networkId}).toArray()
           const task = conn.db("identifier").collection("virtualTask")
           let walletArr = await getwallet.find({_id: id}).toArray()
           let walletinfo = walletArr[0]
@@ -1156,7 +1159,7 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
                   "data_file_name": '',
                   "public_ip": String(public_ip),
                   "network_filters": network_filters,
-                  "network_name": String(network_name?network_name:'')
+                  "network_name": String(networkArr.length?networkArr[0].network_name:'')
                 },
                 "nonce": nonce1,
                 "sign": sign1,

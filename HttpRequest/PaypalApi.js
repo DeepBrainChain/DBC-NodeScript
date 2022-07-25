@@ -17,7 +17,7 @@ const MongoClient = mongodb.MongoClient;
 const url = mongoUrl;
 const urlEcode = bodyParser.json()
 
-// 支付宝SDK
+// 支付宝SDK - sandbox
 const alipaySdk = new AlipaySdk.default({
   appId: '2021000121601209',
   signType: 'RSA2',
@@ -25,6 +25,15 @@ const alipaySdk = new AlipaySdk.default({
   alipayPublicKey: 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAj+jB/RyAoBoeju9SgEgRJgursWgcfEaLbk9kqV2WIXUYu2kyAV7W9aEB884K9wmMmWlFg/elhW08XlWItP/96nmfpu1GvyBgoTNvHJhDX2asuqGffbSS+kK/AJ+ffQj4IN8X5QslpdoLdzS8mhD1r+ZiHysyeocB6terun0Mx0+Wuk4VjcNuyXWeygaUF8Ie9tFr8aLJbPTJEoPxF+iXxb56wV1bpdmaBO1+O5Ol3EGSNzTlxUKIofoWPmbv/N0xtesSmoKMLfSv/xyb0yR6K0dn0Yl5uZMu5DeLReFzDeQixM7PBU5hj7DIYiT3WDxlxslQpBf2fzieOsbusr76twIDAQAB',
   privateKey: 'MIIEpQIBAAKCAQEAwjDSHw2cA86SU3cNY3KKNID/QGSzhXg3z5tNhWaYF4faZIsQJ92N6T6tmuFCj783ucgHu7Fg0o1Z69rsHFwBEpkl6tEjfS90/wodtpTVyF4CvUP6kd1uyqIGw+nbKNVY1rfjFZCCCJYsyYcea8ttyU3BAiG4NU1Fo3v3sM7874t0umroPQBw54Sr8P99DGkLw9ec5dUddVovbmMpQcVBgisliJ69AL74OaU8foHoifmJSplktQpPFn7gP4LiVOw1gt4pWJR5b8zeVwXE83IwB7bEqleCVah1x+4AygcAvw9GIFrkRZ3mZaI/U2VGpxd7Jtdf6HSA4qUQlrTZxyZvGQIDAQABAoIBAFnkw8BASpKwk6gzmm0I3tWDSaYDd983UY63c+FnJsztxLl6bpYlx8XLkA38bRWiDSfhY0MNz6ZobNHz3A0cwhpb7uOOwQD4cQ6HHk4hA/3nFxmKWHohqWIAM2WJ4jw61w8+vM6EwM08x6ra88guubnQVqKn/WAfTzdo8bZVe11fvuTVJ38osU2ZhG5En+de6bSfZHiyPmiSVOEpoxpzNI66P1AXWT1Je1XO+bN+aV5mZTsS2D4XVa16yCyWC5RZlzUaeRE+9oOznd4rVpJ7U2th3yHwkO81+9kUBsWvoaYyyhULXQ06x1eUlpmbSZ3O6OWezW3fmsrv0H9fOCmMzkkCgYEA/4+iZY7flZKdbGPS7wEpYbx4n8yVzDnvRdFjp1mpdPwbkrszfimzyZAMaJmGeZrKWoieanA6YZ+Ncd5Dx+liZ63ebk2H051FLtaJCaC2yQM9YsPnfhmNeZEBQKG4toCK9B0xzV68PqAXEwXxEpEdT8MR/iiYiaMiQM0GZAIV9HsCgYEAwoYz9eTBjRbxUsI95witM1tj1wHvUDIcx2RW11oOaEcWdW81ZeuxyDYKcdIuRmgskeUZi/kKSd+kI72GhfQ2HfkIdFDmrXY7MBpSzd863yN7eIQrCOlVzs7H5L+Ib2y0R/SRJjiDv+KbCRRg4urab4hcoyPpU47gS6bIgSNYaHsCgYEA2e9TPegpIxR0ywoVx1vmPkLLWvrMg+yj75YwtXXw3KJhoS+jKePGPg1ph4nk867dAXegIIS0RKwbow84HjMYh/HtzYKwYfWsGdU558v2FFV+88q8jvybeR//QW6oZnoYBTUgU1KGlaFQDBj1DDBUHsDrhyJ3cmh7vWcaHA7rSiECgYEAvcvDlwAD+W2ROHZdf7Zvh9R7raUtosnCWqoEMUqlFAmIWDyRlUhKxlY0CqpQjFHIavFl47Sx3TJgLJ8XSkvlIYmCPjtRV54sUdrdQBG2l1E/f281rhQ8rPQFBaP7svwVSr/Nf8VUhzzKmClR/xW222vpNyQq3GRjZGzu5VFfSVECgYEAyZ+ODhsl67c1Y2/W6H0ffavHHcGN5rLF0Cp8AaX7IDee1jPg+Tb5lXFn3VQ9sbBBJ7paCyvj3TOwHE189GrVuC8M+r0bz7xsFerzDpOnspd+eBbNZl/hCLX06pPP3CS/kwrptB2Y3o/0it8zrXq5SAGRFvpYe4rlMqDK/idbtFg=',
 });
+
+// 支付宝SDK - product
+// const alipaySdkPro = new AlipaySdk.default({
+//   appId: '2021003141699069',
+//   signType: 'RSA2',
+//   gateway: 'https://openapi.alipay.com/gateway.do',
+//   alipayPublicKey: 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAofRR2sdt+85jSBOHhUax7E5CRJjAGj/9zoW0TLz4QGziXwoPwMfwwQlFNLNmW2VTboTi9fKH60nnMBw1TRlRuuN4/EUzpI0lUdrrsKplcDAumYKJvPj1USkUkxdrhdfIOcE+smhdYpU5a14flkZ1nOVb3eXY3YIxZBRQeYPcavvu69sI7GcDZ/KcHVLtnIKi7+2I7gkqW2hGMT5a9D9V3WAPhwMH81ag6Jf4FRrfIM4qhDol2dmAIxjH4ux3qsRNXd/Ku8fjIQCzomaDh6LhYctUCwkYiHVuuMp863gnxcBM9ME8mLI995QLAiglEWpMuiZ5N2D8oGNMtyLc1W9tiwIDAQAB',
+//   privateKey: 'MIIEowIBAAKCAQEAofRR2sdt+85jSBOHhUax7E5CRJjAGj/9zoW0TLz4QGziXwoPwMfwwQlFNLNmW2VTboTi9fKH60nnMBw1TRlRuuN4/EUzpI0lUdrrsKplcDAumYKJvPj1USkUkxdrhdfIOcE+smhdYpU5a14flkZ1nOVb3eXY3YIxZBRQeYPcavvu69sI7GcDZ/KcHVLtnIKi7+2I7gkqW2hGMT5a9D9V3WAPhwMH81ag6Jf4FRrfIM4qhDol2dmAIxjH4ux3qsRNXd/Ku8fjIQCzomaDh6LhYctUCwkYiHVuuMp863gnxcBM9ME8mLI995QLAiglEWpMuiZ5N2D8oGNMtyLc1W9tiwIDAQABAoIBAHGV9ULH1C9i1ObcK5QhvO/LA1cw+qpubwfFZmrbrhEhTLLzT5EZqZT5d3w6xnMbYaSFtthgPUucDXUEk617MIMuvs/PiSTDiYUbUWoaWAKTCFvJ3eiXgxZlBXUUW+kHKfq3uc1OvRBDMH5JCUZQLHTZt9CtP6g7g4B5bueKv7CX2ref1J1wR7+IdOHOXDM6quWyA3j9nAgwvij5Yr+YHoyc+eb0rM/BAbK/MKaseyzqpWRkunKTXMo/+A4ysNraldnaydz12A8+KDuDAAmQqzmGS4vLxejBYux1PTu9O99fHITyNVVlSrQdse5mZMGWLQ40BJBqLxUsHltOplOPWWECgYEA3IB/8+X2LaVESToGMQurTG6ldi6IP7b9p6UYDXW85FdJmyshtYiw3A0sQt9892i9gJrcY/03sQCh+pSCJTMqenrJY/3hHSlL+fHoUhlF1Ul+HCs8jFkarE5fmx0Ij36J24ghHkh9iqFrAWLpVmeY7eLAV83i8bS45koOo0BGeJcCgYEAvAbpN2S9Zh/7Oea8He92o2Kqg7oVfCG/+gju1M6g7jYcelomf1PHpWx9+rrKS6bVdRhW4TYXduGbkhQZAvg3dg0Is6XdY3JnCzf+bfVG5fE3jsriK5sHjT/Xvyh+TPlgwAtMc1/DhrSNH2MuZJL9ENfLQjQNvZLpzokqlU/5/S0CgYADh4cEx2SGXIPYTDZ3KIGoaoj5eEs0AeDTgx/8bysD2KXT9v/GIRb7nrZbp6ofZ6zI1zG54/61NZZiJWhj4grHBRoeIJ0u009lA8s9LSxh+pgrKUIB2RdFNMfw+qj9awAX5HjrPCvOQUEuN4AWovferud3QFNmnQbsoLjVQh0epwKBgQCF8uZx7/J9rorq1NVu/gkmnEOdVBO6OtDo7zQ1pn4/NY1UHKUQUD8KOiAFXsx+2Ht4z74U8tQEfPS3PFoVI39fOinY0XDGR9ngxCMdcn7vkMhjkWVOa0MV/UVViSNw8rdaGLJ9/trsO/PNSHrka1KdjR3gK/Ud+GtYF5+efzs4gQKBgB8UPx/eCiwXVGqIk3Pl3kWvbc9znx1uGtPcE7q/3IHSOVISflLDOby+S2TkLGELXZ3RZioeq4X1cdMTpYeX+93DY/pTdM0zcI2rILwzl0YzJxb7goH0mojN6JeSisKl3BLzNtlojr3nwS9A9cwlukgtZHUDODaryWkRzQv8KYhk',
+// });
 
 // 定义路由
 export const Recharge = express.Router()
@@ -318,14 +327,14 @@ Recharge.get('/confirmPayment', async (request, response ,next) => {
 
 // 支付宝支付
 Recharge.post('/createPayByAli', urlEcode, async (request, response, next) => {
-  const { money, orderId } = request.body
+  const { money, orderId, wallet } = request.body
   const formData = new AliPayForm.default();
   // 调用 setMethod 并传入 get，会返回可以跳转到支付页面的 url
   formData.setMethod('get');
   // notifyUrl：消息回调的接口，当付款成功，支付宝会发送成功信息到我们的项目当中，告诉我们付款成功了，即我们项目自己定义的接口，需要公网能够访问到的地址，即**项目要上线。**如果是自己本地的测试项目，可以配置内网穿透。
   // returnUrl：付款成功之后，页面会自动跳转，returnUrl就表示这个跳转的地址。
   // formData.addField('notifyUrl', 'http://www.com/notify');
-  // formData.addField('returnUrl', 'http://localhost:9999/trade/buy_3');  
+  formData.addField('returnUrl', `http://8.219.75.114:64433/trade/buy_4?order_id=${orderId}&address_user=${wallet}&payType=zfb`);  
   // const outTradeNo = createOrder()
   formData.addField('bizContent', {
     outTradeNo: orderId, // 商户网站唯一订单号
