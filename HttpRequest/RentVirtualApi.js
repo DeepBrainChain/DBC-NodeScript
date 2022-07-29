@@ -815,103 +815,103 @@ rentVirtual.post('/createNetwork', urlEcode, async (request, response ,next) => 
       let netArr = await networkInfo.find({ _id: (server_room + wallet) }).toArray()
       if (netArr.length) {
         const netInfo = netArr[0]
-        // let searchNet = {}
-        // const { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
-        // try {
-        //   searchNet = await httpRequest({
-        //     url: baseUrl + `/api/v1/lan/${netInfo.network_name}`,
-        //     method: "post",
-        //     json: true,
-        //     headers: {},
-        //     body: {
-        //       "peer_nodes_list": [machine_id], 
-        //       "additional": {},
-        //       "nonce": nonce1,
-        //       "sign": sign1,
-        //       "wallet": walletinfo.wallet
-        //     }
-        //   })
-        // } catch (err) {
-        //   searchNet = {
-        //     message: err.message
-        //   }
-        // }
-        // if (searchNet.errcode != undefined || searchNet.errcode != null) {
-        //   searchNet = searchNet
-        // } else {
-        //   if (searchNet.netcongtu || searchNet.mainnet) {
-        //     if (machine_id.indexOf('CTC') != -1) {
-        //       searchNet = searchNet.netcongtu
-        //     } else {
-        //       searchNet = searchNet.mainnet
-        //     }
-        //   } else {
-        //     searchNet = searchNet
-        //   }
-        // }
-        // if (searchNet&&searchNet.errcode == 0) {
+        let searchNet = {}
+        const { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
+        try {
+          searchNet = await httpRequest({
+            url: baseUrl + `/api/v1/lan/${netInfo.network_name}`,
+            method: "post",
+            json: true,
+            headers: {},
+            body: {
+              "peer_nodes_list": [machine_id], 
+              "additional": {},
+              "nonce": nonce1,
+              "sign": sign1,
+              "wallet": walletinfo.wallet
+            }
+          })
+        } catch (err) {
+          searchNet = {
+            message: err.message
+          }
+        }
+        if (searchNet.errcode != undefined || searchNet.errcode != null) {
+          searchNet = searchNet
+        } else {
+          if (searchNet.netcongtu || searchNet.mainnet) {
+            if (machine_id.indexOf('CTC') != -1) {
+              searchNet = searchNet.netcongtu
+            } else {
+              searchNet = searchNet.mainnet
+            }
+          } else {
+            searchNet = searchNet
+          }
+        }
+        if (searchNet&&searchNet.errcode == 0) {
           response.json({
             code: 10001,
             msg: '已存在网络名称',
             success: true,  
             content: netInfo.network_name
           })
-        // } else {
-        //   await networkInfo.deleteOne({ _id: (server_room + wallet)})
-        //   const { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
-        //   const network_name = getnetwork();
-        //   let VirInfo = {}
-        //   try {
-        //     VirInfo = await httpRequest({
-        //       url: baseUrl + "/api/v1/lan/create",
-        //       method: "post",
-        //       json: true,
-        //       headers: {},
-        //       body: {
-        //         "peer_nodes_list": [machine_id], 
-        //         "additional": {
-        //           "network_name": network_name,
-        //           "ip_cidr": "192.168.66.0/24"
-        //         },
-        //         "nonce": nonce1,
-        //         "sign": sign1,
-        //         "wallet": walletinfo.wallet
-        //       }
-        //     })
-        //   } catch (err) {
-        //     VirInfo = {
-        //       message: err.message
-        //     }
-        //   }
-        //   if (VirInfo.errcode != undefined || VirInfo.errcode != null) {
-        //     VirInfo = VirInfo
-        //   } else {
-        //     if (VirInfo.netcongtu || VirInfo.mainnet) {
-        //       if (machine_id.indexOf('CTC') != -1) {
-        //         VirInfo = VirInfo.netcongtu
-        //       } else {
-        //         VirInfo = VirInfo.mainnet
-        //       }
-        //     } else {
-        //       VirInfo = VirInfo
-        //     }
-        //   }
-        //   if (VirInfo&&VirInfo.errcode == 0) {
-        //     await networkInfo.insertOne({ _id: (server_room + wallet), network_name: network_name })
-        //     response.json({
-        //       code: 10001,
-        //       msg: '获取网络名称成功',
-        //       success: true,
-        //       content: network_name
-        //     })
-        //   } else {
-        //     response.json({
-        //       code: -2,
-        //       msg: VirInfo.message,
-        //       success: false
-        //     })
-        //   }
-        // }
+        } else {
+          await networkInfo.deleteOne({ _id: (server_room + wallet)})
+          const { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
+          const network_name = getnetwork();
+          let VirInfo = {}
+          try {
+            VirInfo = await httpRequest({
+              url: baseUrl + "/api/v1/lan/create",
+              method: "post",
+              json: true,
+              headers: {},
+              body: {
+                "peer_nodes_list": [machine_id], 
+                "additional": {
+                  "network_name": network_name,
+                  "ip_cidr": "192.168.66.0/24"
+                },
+                "nonce": nonce1,
+                "sign": sign1,
+                "wallet": walletinfo.wallet
+              }
+            })
+          } catch (err) {
+            VirInfo = {
+              message: err.message
+            }
+          }
+          if (VirInfo.errcode != undefined || VirInfo.errcode != null) {
+            VirInfo = VirInfo
+          } else {
+            if (VirInfo.netcongtu || VirInfo.mainnet) {
+              if (machine_id.indexOf('CTC') != -1) {
+                VirInfo = VirInfo.netcongtu
+              } else {
+                VirInfo = VirInfo.mainnet
+              }
+            } else {
+              VirInfo = VirInfo
+            }
+          }
+          if (VirInfo&&VirInfo.errcode == 0) {
+            await networkInfo.insertOne({ _id: (server_room + wallet), network_name: network_name })
+            response.json({
+              code: 10001,
+              msg: '获取网络名称成功',
+              success: true,
+              content: network_name
+            })
+          } else {
+            response.json({
+              code: -2,
+              msg: VirInfo.message,
+              success: false
+            })
+          }
+        }
       } else {
         const { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
         const network_name = getnetwork();
@@ -1134,6 +1134,17 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
           let { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
           let VirInfo = {}
           const task_id = createTaskId()
+          await task.insertOne({
+            _id: task_id,
+            belong: id,
+            images: image_name,
+            port_min: port_min,
+            port_max: port_max,
+            rdp_port: rdp_port,
+            network_sec: network_sec,
+            network_Id: network_Id,
+            task_id: task_id
+          })
           try {
             VirInfo = await httpRequest({
               url: baseUrl + "/api/v1/tasks/start",
@@ -1171,17 +1182,6 @@ rentVirtual.post('/createVirTask', urlEcode, async (request, response ,next) => 
               message: err.message
             }
           }
-          await task.insertOne({
-            _id: task_id,
-            belong: id,
-            images: image_name,
-            port_min: port_min,
-            port_max: port_max,
-            rdp_port: rdp_port,
-            network_sec: network_sec,
-            network_Id: network_Id,
-            task_id: task_id
-          })
           if (VirInfo.errcode != undefined || VirInfo.errcode != null) {
             VirInfo = VirInfo
           } else {
