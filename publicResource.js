@@ -1,3 +1,5 @@
+import AlipaySdk from 'alipay-sdk';
+
 export const typeJson = {
   "ReportId": "u64",
   "SlashId": "u64",
@@ -432,8 +434,8 @@ export const wssChain = {
  */
 // export const baseUrl = 'http://115.231.234.37:5052' // 聪图云私链端口
 // export const baseUrl = 'http://115.231.234.32:5052' // 主网测试端口
-// export const baseUrl = 'http://119.145.254.119:5034' // 综合端口号
-export const baseUrl = 'http://119.6.235.171:5022' // 综合端口号
+export const baseUrl = 'http://192.168.0.155:5056' // 综合端口号
+// export const baseUrl = 'http://119.6.235.171:5022' // 综合端口号
 // export const baseUrl = 'http://115.231.234.34:5052' // 主网端口
 
 /**
@@ -464,6 +466,15 @@ export const mongoUrlSeed = 'ba22370884954c456be7fc10cbae7a652fbadfb64e4ab9aab4a
  * 定义租用机器扣除的指定钱包
  */
 export const designatedWallet = '5F7L9bc3q4XdhVstJjVB2o7S8RHz2YKsHUB6k3uQpErTmVWu' // 手续费指定钱包
+
+// 支付宝支付配置文件
+export const alipaySdk = new AlipaySdk.default({
+  appId: '2021003141699069',
+  signType: 'RSA2',
+  gateway: 'https://openapi.alipay.com/gateway.do',
+  alipayPublicKey: 'your alipayPublicKey',
+  privateKey: 'your privateKey',
+});
 
 /**
  * forever start -o http-out.log -e http-err.log router.js

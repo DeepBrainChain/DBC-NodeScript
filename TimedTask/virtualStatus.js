@@ -86,7 +86,9 @@ export const getStake = async (wallet) => {
 
 const checkVirtualStatus = async () => {
   try {
-    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+    if (conn == null){
+      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+    }
     const Info = conn.db("identifier").collection("VirtualInfo")
     const wallet = conn.db("identifier").collection("temporaryWallet")
     const virInfo = conn.db("identifier").collection("virtualTask")
@@ -195,14 +197,15 @@ const checkVirtualStatus = async () => {
             if (status.isInBlock) {
               events.forEach( async ({ event: { method, data: [error] } }) => {
                 if(method == 'ExtrinsicSuccess'){
-                  if (conn == null) {
-                    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+                  let conn1 = null
+                  if (conn1 == null) {
+                    conn1 = await MongoClient.connect(url, { useUnifiedTopology: true })
                   }
-                  const search = conn.db("identifier").collection("VirtualInfo")
+                  const search = conn1.db("identifier").collection("VirtualInfo")
                   await search.updateOne({_id: orderArr3[i]._id}, {$set:{ reportErr: '', refundCoin: ''}})
-                  if (conn != null){
-                    conn.close()
-                    conn = null
+                  if (conn1 != null){
+                    conn1.close()
+                    conn1 = null
                   }
                 }
               })

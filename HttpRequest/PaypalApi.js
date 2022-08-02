@@ -1,14 +1,14 @@
 import express from 'express'
 import mongodb from 'mongodb'
 import bodyParser from 'body-parser'
-import { mongoUrlSeed, wssChain, typeJson, paypalUrl, walletInfo } from '../publicResource.js'
+import { mongoUrlSeed, wssChain, typeJson, paypalUrl, walletInfo, alipaySdk } from '../publicResource.js'
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import httpRequest from 'request-promise';
 import { BN_TEN } from '@polkadot/util';
 import BN from 'bn.js'
 import { decryptByAes256 } from '../testScript/crypto.js'
-import AlipaySdk from 'alipay-sdk';
+// import AlipaySdk from 'alipay-sdk';
 import AliPayForm from 'alipay-sdk/lib/form.js';
 const mongoUrl = decryptByAes256(mongoUrlSeed)
 const walletTransfer = JSON.parse(decryptByAes256(walletInfo))
@@ -18,15 +18,14 @@ const url = mongoUrl;
 const urlEcode = bodyParser.json()
 
 // 支付宝SDK - sandbox
-const alipaySdk = new AlipaySdk.default({
-  appId: '2021000121601209',
-  signType: 'RSA2',
-  gateway: 'https://openapi.alipaydev.com/gateway.do',
-  alipayPublicKey: 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAj+jB/RyAoBoeju9SgEgRJgursWgcfEaLbk9kqV2WIXUYu2kyAV7W9aEB884K9wmMmWlFg/elhW08XlWItP/96nmfpu1GvyBgoTNvHJhDX2asuqGffbSS+kK/AJ+ffQj4IN8X5QslpdoLdzS8mhD1r+ZiHysyeocB6terun0Mx0+Wuk4VjcNuyXWeygaUF8Ie9tFr8aLJbPTJEoPxF+iXxb56wV1bpdmaBO1+O5Ol3EGSNzTlxUKIofoWPmbv/N0xtesSmoKMLfSv/xyb0yR6K0dn0Yl5uZMu5DeLReFzDeQixM7PBU5hj7DIYiT3WDxlxslQpBf2fzieOsbusr76twIDAQAB',
-  privateKey: 'MIIEpQIBAAKCAQEAwjDSHw2cA86SU3cNY3KKNID/QGSzhXg3z5tNhWaYF4faZIsQJ92N6T6tmuFCj783ucgHu7Fg0o1Z69rsHFwBEpkl6tEjfS90/wodtpTVyF4CvUP6kd1uyqIGw+nbKNVY1rfjFZCCCJYsyYcea8ttyU3BAiG4NU1Fo3v3sM7874t0umroPQBw54Sr8P99DGkLw9ec5dUddVovbmMpQcVBgisliJ69AL74OaU8foHoifmJSplktQpPFn7gP4LiVOw1gt4pWJR5b8zeVwXE83IwB7bEqleCVah1x+4AygcAvw9GIFrkRZ3mZaI/U2VGpxd7Jtdf6HSA4qUQlrTZxyZvGQIDAQABAoIBAFnkw8BASpKwk6gzmm0I3tWDSaYDd983UY63c+FnJsztxLl6bpYlx8XLkA38bRWiDSfhY0MNz6ZobNHz3A0cwhpb7uOOwQD4cQ6HHk4hA/3nFxmKWHohqWIAM2WJ4jw61w8+vM6EwM08x6ra88guubnQVqKn/WAfTzdo8bZVe11fvuTVJ38osU2ZhG5En+de6bSfZHiyPmiSVOEpoxpzNI66P1AXWT1Je1XO+bN+aV5mZTsS2D4XVa16yCyWC5RZlzUaeRE+9oOznd4rVpJ7U2th3yHwkO81+9kUBsWvoaYyyhULXQ06x1eUlpmbSZ3O6OWezW3fmsrv0H9fOCmMzkkCgYEA/4+iZY7flZKdbGPS7wEpYbx4n8yVzDnvRdFjp1mpdPwbkrszfimzyZAMaJmGeZrKWoieanA6YZ+Ncd5Dx+liZ63ebk2H051FLtaJCaC2yQM9YsPnfhmNeZEBQKG4toCK9B0xzV68PqAXEwXxEpEdT8MR/iiYiaMiQM0GZAIV9HsCgYEAwoYz9eTBjRbxUsI95witM1tj1wHvUDIcx2RW11oOaEcWdW81ZeuxyDYKcdIuRmgskeUZi/kKSd+kI72GhfQ2HfkIdFDmrXY7MBpSzd863yN7eIQrCOlVzs7H5L+Ib2y0R/SRJjiDv+KbCRRg4urab4hcoyPpU47gS6bIgSNYaHsCgYEA2e9TPegpIxR0ywoVx1vmPkLLWvrMg+yj75YwtXXw3KJhoS+jKePGPg1ph4nk867dAXegIIS0RKwbow84HjMYh/HtzYKwYfWsGdU558v2FFV+88q8jvybeR//QW6oZnoYBTUgU1KGlaFQDBj1DDBUHsDrhyJ3cmh7vWcaHA7rSiECgYEAvcvDlwAD+W2ROHZdf7Zvh9R7raUtosnCWqoEMUqlFAmIWDyRlUhKxlY0CqpQjFHIavFl47Sx3TJgLJ8XSkvlIYmCPjtRV54sUdrdQBG2l1E/f281rhQ8rPQFBaP7svwVSr/Nf8VUhzzKmClR/xW222vpNyQq3GRjZGzu5VFfSVECgYEAyZ+ODhsl67c1Y2/W6H0ffavHHcGN5rLF0Cp8AaX7IDee1jPg+Tb5lXFn3VQ9sbBBJ7paCyvj3TOwHE189GrVuC8M+r0bz7xsFerzDpOnspd+eBbNZl/hCLX06pPP3CS/kwrptB2Y3o/0it8zrXq5SAGRFvpYe4rlMqDK/idbtFg=',
-});
+// const alipaySdk = new AlipaySdk.default({
+//   appId: '2021000121601209',
+//   signType: 'RSA2',
+//   gateway: 'https://openapi.alipaydev.com/gateway.do',
+//   alipayPublicKey: 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAj+jB/RyAoBoeju9SgEgRJgursWgcfEaLbk9kqV2WIXUYu2kyAV7W9aEB884K9wmMmWlFg/elhW08XlWItP/96nmfpu1GvyBgoTNvHJhDX2asuqGffbSS+kK/AJ+ffQj4IN8X5QslpdoLdzS8mhD1r+ZiHysyeocB6terun0Mx0+Wuk4VjcNuyXWeygaUF8Ie9tFr8aLJbPTJEoPxF+iXxb56wV1bpdmaBO1+O5Ol3EGSNzTlxUKIofoWPmbv/N0xtesSmoKMLfSv/xyb0yR6K0dn0Yl5uZMu5DeLReFzDeQixM7PBU5hj7DIYiT3WDxlxslQpBf2fzieOsbusr76twIDAQAB',
+//   privateKey: 'MIIEpQIBAAKCAQEAwjDSHw2cA86SU3cNY3KKNID/QGSzhXg3z5tNhWaYF4faZIsQJ92N6T6tmuFCj783ucgHu7Fg0o1Z69rsHFwBEpkl6tEjfS90/wodtpTVyF4CvUP6kd1uyqIGw+nbKNVY1rfjFZCCCJYsyYcea8ttyU3BAiG4NU1Fo3v3sM7874t0umroPQBw54Sr8P99DGkLw9ec5dUddVovbmMpQcVBgisliJ69AL74OaU8foHoifmJSplktQpPFn7gP4LiVOw1gt4pWJR5b8zeVwXE83IwB7bEqleCVah1x+4AygcAvw9GIFrkRZ3mZaI/U2VGpxd7Jtdf6HSA4qUQlrTZxyZvGQIDAQABAoIBAFnkw8BASpKwk6gzmm0I3tWDSaYDd983UY63c+FnJsztxLl6bpYlx8XLkA38bRWiDSfhY0MNz6ZobNHz3A0cwhpb7uOOwQD4cQ6HHk4hA/3nFxmKWHohqWIAM2WJ4jw61w8+vM6EwM08x6ra88guubnQVqKn/WAfTzdo8bZVe11fvuTVJ38osU2ZhG5En+de6bSfZHiyPmiSVOEpoxpzNI66P1AXWT1Je1XO+bN+aV5mZTsS2D4XVa16yCyWC5RZlzUaeRE+9oOznd4rVpJ7U2th3yHwkO81+9kUBsWvoaYyyhULXQ06x1eUlpmbSZ3O6OWezW3fmsrv0H9fOCmMzkkCgYEA/4+iZY7flZKdbGPS7wEpYbx4n8yVzDnvRdFjp1mpdPwbkrszfimzyZAMaJmGeZrKWoieanA6YZ+Ncd5Dx+liZ63ebk2H051FLtaJCaC2yQM9YsPnfhmNeZEBQKG4toCK9B0xzV68PqAXEwXxEpEdT8MR/iiYiaMiQM0GZAIV9HsCgYEAwoYz9eTBjRbxUsI95witM1tj1wHvUDIcx2RW11oOaEcWdW81ZeuxyDYKcdIuRmgskeUZi/kKSd+kI72GhfQ2HfkIdFDmrXY7MBpSzd863yN7eIQrCOlVzs7H5L+Ib2y0R/SRJjiDv+KbCRRg4urab4hcoyPpU47gS6bIgSNYaHsCgYEA2e9TPegpIxR0ywoVx1vmPkLLWvrMg+yj75YwtXXw3KJhoS+jKePGPg1ph4nk867dAXegIIS0RKwbow84HjMYh/HtzYKwYfWsGdU558v2FFV+88q8jvybeR//QW6oZnoYBTUgU1KGlaFQDBj1DDBUHsDrhyJ3cmh7vWcaHA7rSiECgYEAvcvDlwAD+W2ROHZdf7Zvh9R7raUtosnCWqoEMUqlFAmIWDyRlUhKxlY0CqpQjFHIavFl47Sx3TJgLJ8XSkvlIYmCPjtRV54sUdrdQBG2l1E/f281rhQ8rPQFBaP7svwVSr/Nf8VUhzzKmClR/xW222vpNyQq3GRjZGzu5VFfSVECgYEAyZ+ODhsl67c1Y2/W6H0ffavHHcGN5rLF0Cp8AaX7IDee1jPg+Tb5lXFn3VQ9sbBBJ7paCyvj3TOwHE189GrVuC8M+r0bz7xsFerzDpOnspd+eBbNZl/hCLX06pPP3CS/kwrptB2Y3o/0it8zrXq5SAGRFvpYe4rlMqDK/idbtFg=',
+// });
 
-// 支付宝SDK - product
 
 
 // 定义路由
