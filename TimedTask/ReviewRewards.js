@@ -87,18 +87,23 @@ let updataMachine = []
 var conn = null;
 export const getList = async (wallet, nowDay) => {
   try {
-    conn = await MongoClient.connect(url, { useUnifiedTopology: true });
+    if (conn == null) {
+      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+    }
     const test = conn.db("identifier").collection("auditRewardTest");
     let allListedMachine = []
     let j = 0 
     let machinesList =  await leaseCommitteeOps(wallet);
     let list = machinesList.online_machine // 获取当前委员会验证上线的机器
     for(let i = 0; i< list.length; i++){
+      if (conn == null) {
+        conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      }
       // 查询
       var arr = await test.find({machine_id: list[i]}).toArray();
       var arr_id = await test.find({ _id: wallet+list[i] }).toArray();
-      if(arr_id.length){ // 判断数据库中是否存在此条数据 存在，就更新，不存在，就新增
-        if(updataMachine.indexOf(list[i]) == -1){ // 判断机器是否已经更新过数据
+      if( arr_id.length) { // 判断数据库中是否存在此条数据 存在，就更新，不存在，就新增
+        if (updataMachine.indexOf(list[i]) == -1) { // 判断机器是否已经更新过数据
           let reward_length = nowDay - arr[0].online_day - arr[0].reward.length
           if(reward_length > 1){
             let td_reward = await erasMachineReleasedReward( nowDay-1, list[i] ) // 获取该机器当天的收入，未除99
@@ -114,13 +119,13 @@ export const getList = async (wallet, nowDay) => {
             updataMachine.push(list[i])
           }
         }
-      }else{ // 数据库中不存在时
+      } else { // 数据库中不存在时
         let result = Total_machinesList.findIndex(item=>item.machine_id == list[i]) // 同一台机器是否已获取详细信息
-        if(result != -1){ // 以获取，直接赋值
+        if (result != -1) { // 以获取，直接赋值
           allListedMachine[j] = Total_machinesList[result]
           allListedMachine[j]._id = wallet+allListedMachine[j].machine_id
           allListedMachine[j].wallet = wallet
-        }else{ // 未获取，重新计算
+        } else { // 未获取，重新计算
           allListedMachine[j] = await machinesInfo( nowDay - 1, list[i] ) // 通过机器id获取机器详细信息
           allListedMachine[j].reward = []
           allListedMachine[j].online_day = 0
@@ -128,7 +133,8 @@ export const getList = async (wallet, nowDay) => {
           allListedMachine[j].todayReward = allListedMachine[j].todayReward/99/allListedMachine[j].info.reward_committee.length
           // 计算从上线到现在每天的奖励，推出reward数据保存
           // allListedMachine[j].online_day = parseInt((allListedMachine[j].info.online_height.replace(',',''))/2880) - 183 // 获取机器第几天上线
-          allListedMachine[j].online_day = parseInt((allListedMachine[j].info.online_height.replace(',',''))/2880) // 获取机器第几天上线
+          let OnlineHeight = allListedMachine[j].info.online_height.replace(new RegExp(',', "g"),'')
+          allListedMachine[j].online_day = parseInt(OnlineHeight/2880) - 183 // 获取机器第几天上线
           let day = allListedMachine[j].online_day + 1
           while( day < nowDay ){
             allListedMachine[j].reward.push( await erasMachineReleasedReward(day, list[i]) ) // 计算从上线以后每一天的收益
@@ -146,7 +152,7 @@ export const getList = async (wallet, nowDay) => {
         j++
       }
     }
-    if(allListedMachine.length){
+    if (allListedMachine.length) {
       await test.insertMany(allListedMachine)
     }
   } catch (err) {
@@ -161,7 +167,9 @@ export const getList = async (wallet, nowDay) => {
 
 const firstRun = async () => {
   try {
-    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+    if (conn == null) {
+      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+    }
     console.log(" firstRun ----> 数据库已连接");
     const test = conn.db("identifier").collection("auditRewardTest");
     await test.deleteMany({})

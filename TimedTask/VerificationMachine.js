@@ -82,6 +82,11 @@ let committeeMachineListInfo = []
           message: err.message
         }
       }
+      if (machineInfo.errcode == 0 ) {
+        if (machineInfo.message.cpu.hz == 'Processor') {
+          machineInfo.message.cpu.hz = '2900MHz'
+        }
+      }
       infoMachine.push({
         _id: wallet+list.booked_machine[i],
         wallet: wallet,
@@ -108,6 +113,11 @@ let committeeMachineListInfo = []
       } catch (err) {
         machineInfo = {
           message: err.message
+        }
+      }
+      if (machineInfo.errcode == 0 ) {
+        if (machineInfo.message.cpu.hz == 'Processor') {
+          machineInfo.message.cpu.hz = '2900MHz'
         }
       }
       infoMachine.push({
@@ -138,6 +148,11 @@ let committeeMachineListInfo = []
           message: err.message
         }
       }
+      if (machineInfo.errcode == 0 ) {
+        if (machineInfo.message.cpu.hz == 'Processor') {
+          machineInfo.message.cpu.hz = '2900MHz'
+        }
+      }
       infoMachine.push({
         _id: wallet+list.confirmed_machine[i],
         wallet: wallet,
@@ -157,10 +172,12 @@ let committeeMachineListInfo = []
 
 const getMachine = async () => {
   try {
-    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
     let committee = await committeeList()
     for(let i = 0; i < committee.length; i++){
       let info = await committeeMachine(committee[i]);
+      if (conn == null) {
+        conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      }
       const test = conn.db("identifier").collection("auditListTest")
       await test.deleteMany({ wallet: committee[i] })
       if (info&&info.length) {

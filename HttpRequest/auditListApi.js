@@ -294,6 +294,8 @@ getAuditList.post('/createVerifyVir', urlEcode, async (request, response ,next) 
             "peer_nodes_list": [machine_id], 
             "additional": {
               "ssh_port": '5682',
+              "operation_system": 'linux',
+              "bios_mode": "legacy",
               "image_name": String(image_name),
               "gpu_count": String(gpu_count),
               "cpu_cores": String(cpu_cores),
@@ -311,6 +313,19 @@ getAuditList.post('/createVerifyVir', urlEcode, async (request, response ,next) 
       } catch (err) {
         VirInfo = {
           message: err.message
+        }
+      }
+      if (VirInfo.errcode != undefined || VirInfo.errcode != null) {
+        VirInfo = VirInfo
+      } else {
+        if (VirInfo.netcongtu || VirInfo.mainnet) {
+          if (machine_id.indexOf('CTC') != -1) {
+            VirInfo = VirInfo.netcongtu
+          } else {
+            VirInfo = VirInfo.mainnet
+          }
+        } else {
+          VirInfo = VirInfo
         }
       }
       if (VirInfo&&VirInfo.errcode == 0) {
@@ -389,6 +404,19 @@ getAuditList.post('/getVerifyVir', urlEcode, async (request, response ,next) => 
             message: err.message
           }
         }
+        if (taskinfo.errcode != undefined || taskinfo.errcode != null) {
+          taskinfo = taskinfo
+        } else {
+          if (taskinfo.netcongtu || taskinfo.mainnet) {
+            if (machine_id.indexOf('CTC') != -1) {
+              taskinfo = taskinfo.netcongtu
+            } else {
+              taskinfo = taskinfo.mainnet
+            }
+          } else {
+            taskinfo = taskinfo
+          }
+        }
         if (taskinfo&&taskinfo.errcode == 0) {
           response.json({
             code: 10001,
@@ -454,6 +482,19 @@ getAuditList.post('/restartVerifyVir', urlEcode, async (request, response ,next)
       } catch (err) {
         taskinfo = {
           message: err.message
+        }
+      }
+      if (taskinfo.errcode != undefined || taskinfo.errcode != null) {
+        taskinfo = taskinfo
+      } else {
+        if (taskinfo.netcongtu || taskinfo.mainnet) {
+          if (machine_id.indexOf('CTC') != -1) {
+            taskinfo = taskinfo.netcongtu
+          } else {
+            taskinfo = taskinfo.mainnet
+          }
+        } else {
+          taskinfo = taskinfo
         }
       }
       if (taskinfo&&taskinfo.errcode == 0) {

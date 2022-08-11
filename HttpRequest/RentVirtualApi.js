@@ -812,6 +812,31 @@ rentVirtual.post('/createNetwork', urlEcode, async (request, response ,next) => 
       const getwallet = conn.db("identifier").collection("temporaryWallet")
       const walletArr = await getwallet.find({_id: machine_id+wallet}).toArray()
       const walletinfo = walletArr[0]
+      // let newsession;
+      // const { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
+      // try {
+      //   newsession = await httpRequest({
+      //     url: baseUrl + "/api/v1/mining_nodes/session_id",
+      //     method: "post",
+      //     json: true,
+      //     headers: {},
+      //     body: {
+      //       "peer_nodes_list": [machine_id], 
+      //       "additional": { },
+      //       "nonce": nonce1,
+      //       "sign": sign1,
+      //       "wallet": walletinfo.wallet
+      //     }
+      //   })
+      // } catch (err) {
+      //   newsession = {
+      //     message: err.message
+      //   }
+      // }
+      // console.log(newsession, 'newsession');
+      // let { nonce: nonce2, signature: sign2 } = await CreateSignature1(walletinfo.seed, newsession.message.session_id)
+      // console.log(nonce2, sign2, '33');
+      // return
       let netArr = await networkInfo.find({ _id: (server_room + wallet) }).toArray()
       if (netArr.length) {
         const netInfo = netArr[0]

@@ -425,8 +425,8 @@ export const typeJson = {
  */
 export const wssChain = {
   // dbc: 'wss://congtuinfo.dbcwallet.io:7777', // 聪图云私链测试链
-  dbc: 'wss://infotest.dbcwallet.io:7777', // 公链测试链
-  // dbc: 'wss://info.dbcwallet.io' // 公链正式链
+  // dbc: 'wss://infotest.dbcwallet.io:7777', // 公链测试链
+  dbc: 'wss://info.dbcwallet.io' // 公链正式链
 }
 
 /**
@@ -434,8 +434,8 @@ export const wssChain = {
  */
 // export const baseUrl = 'http://115.231.234.37:5052' // 聪图云私链端口
 // export const baseUrl = 'http://115.231.234.32:5052' // 主网测试端口
-export const baseUrl = 'http://192.168.0.155:5056' // 综合端口号
-// export const baseUrl = 'http://119.6.235.171:5022' // 综合端口号
+// export const baseUrl = 'http://119.6.235.169:5052' // 综合端口号
+export const baseUrl = 'http://8.219.75.114:5002' // 综合端口号
 // export const baseUrl = 'http://115.231.234.34:5052' // 主网端口
 
 /**
