@@ -55,6 +55,19 @@ const getBlockTime = async (type) => {
   return info
 }
 
+export const getMacStach = async (wallet) => {
+  let stachname = ''
+  await GetApi()
+  let Stainfo = await api.query.identity.identityOf(wallet)
+  Stainfo = Stainfo.toJSON()
+  if (Stainfo && Stainfo.info) {
+    stachname = Stainfo.info.display.raw.indexOf('0x') == -1 ? Stainfo.info.display.raw : hexToString(Stainfo.info.display.raw)
+  } else {
+    stachname = undefined
+  }
+  return stachname
+}
+
 function flatObject(target) {
   const result = {};
   for (let key in target) {
@@ -104,6 +117,7 @@ const getMachine = async () => {
           const MachineInfo = flatObject(info)
           MachineInfo.gpuType = hexToString(MachineInfo.gpu_type)
           MachineInfo.cpuType = hexToString(MachineInfo.cpu_type)
+          MachineInfo.machine_name = await getMacStach(MachineInfo.machine_stash)
           delete MachineInfo.cpu_type
           delete MachineInfo.gpu_type
           const machineFindArr = await machineConn.find({_id: MachineInfo.machine_id}).toArray()
