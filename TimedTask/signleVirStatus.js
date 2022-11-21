@@ -57,55 +57,26 @@ const checkVirtualStatus = async () => {
   try {
     conn = await MongoClient.connect(url, { useUnifiedTopology: true })
     const OrderInfo = conn.db("identifier").collection("virOrderInfo")
-    const MacInfo = conn.db("identifier").collection("virMachineInfo")
+    const MacInfo = conn.db("identifier").collection("MachineDetailsInfo")
     const wallet = conn.db("identifier").collection("SignleTemporaryWallet")
-    let orderArr1 = await OrderInfo.find({orderStatus: 3}).toArray() // 查询订单中正在使用中的订单
-    let orderArr2 = await OrderInfo.find({orderStatus: 5}).toArray() // 查询订单中已结束但虚拟机未停止的订单
-    let orderArr3 = await OrderInfo.find({orderStatus: {$in:[4, 6]}}).toArray() // 查询订单中创建和转账失败的订单
-    for(let i = 0; i < orderArr1.length; i++){
-      if (orderArr1[i].startTime + orderArr1[i].time*60*60*1000 < Date.now()) {
-        await OrderInfo.updateOne({_id: orderArr1[i]._id}, {$set:{orderStatus: 5}})
-        const MacArr = await MacInfo.find({_id: orderArr1[i].belong}).toArray()
-        const MacArrInfo = MacArr[0]
-        let taskinfo = {}
-        try {
-          taskinfo = await httpRequest({
-            url: baseUrl + "/api/v1/tasks/stop/"+orderArr1[i].task_id,
-            method: "post",
-            json: true,
-            headers: {},
-            body: {
-              "peer_nodes_list": [orderArr1[i].belong], 
-              "additional": {},
-              "session_id": MacArrInfo.session_id,
-              "session_id_sign": MacArrInfo.session_id_sign
-            }
-          })
-        } catch (err) {
-          taskinfo = {
-            message: err.message
-          }
-        }
-        if (taskinfo.errcode != undefined || taskinfo.errcode != null) {
-          taskinfo = taskinfo
-        } else {
-          if (orderArr1[i].belong.indexOf('CTC') != -1) {
-            taskinfo = taskinfo.netcongtu
-          } else {
-            taskinfo = taskinfo.mainnet
-          }
-        }
-        if (taskinfo&&taskinfo.errcode == 0) {
-          await OrderInfo.updateOne({_id: orderArr1[i]._id}, {$set:{status: 'closed'}})
-          await MacInfo.updateOne({_id: orderArr1[i].belong}, {$set:{canuseGpu: MacArrInfo.canuseGpu + orderArr1[i].gpu_count}})
-        }
+    let orderArr1 = await OrderInfo.find({orderStatus: 2}).toArray() // 查询订单中处于创建中或者未创建的订单
+    let orderArr2 = await OrderInfo.find({orderStatus: 3}).toArray() // 查询订单中正在使用中的订单
+    let orderArr3 = await OrderInfo.find({orderStatus: 5}).toArray() // 订单由于无法创建虚拟机取消(如果CanUseGpu等于机器的原始数目，hasSignle变为false,此时需要等15分钟才会开始退币)
+    let orderArr4 = await OrderInfo.find({errRefund: true}).toArray() // 查询退币失败的订单
+    for (let i = 0; i < orderArr1.length; i++) {
+      if (orderArr1[i].createTime + 15*60*1000 < Date.now()) {
+        await OrderInfo.updateOne({_id: orderArr1[i]._id}, {$set:{orderStatus: 5, status: 'closed'}})
       }
     }
-    for(let i = 0; i < orderArr2.length; i++){
-      if (orderArr2[i].startTime + orderArr2[i].time*60*60*1000 < Date.now()) {
+    for (let i = 0; i < orderArr2.length; i++) {
+      if (orderArr2[i].createTime + orderArr2[i].time*60*60*1000 < Date.now()) {
+        const MacArr = await MacInfo.find({_id: orderArr2[i].machine_id}).toArray()
+        const MacArrInfo = MacArr[0]
+        await MacInfo.updateOne({_id: orderArr2[i].machine_id}, {$set:{CanUseGpu: Number(MacArrInfo.CanUseGpu) + Number(orderArr2[i].gpu_count)}})
+        if (Number(MacArrInfo.CanUseGpu) + Number(orderArr2[i].gpu_count) == MacArrInfo.gpu_num) {
+          await MacInfo.updateOne({_id: orderArr2[i].machine_id}, {$set:{ hasSignle: false}})
+        }
         if (orderArr2[i].status == 'running') {
-          const MacArr = await MacInfo.find({_id: orderArr2[i].belong}).toArray()
-          const MacArrInfo = MacArr[0]
           let taskinfo = {}
           try {
             taskinfo = await httpRequest({
@@ -114,10 +85,10 @@ const checkVirtualStatus = async () => {
               json: true,
               headers: {},
               body: {
-                "peer_nodes_list": [orderArr2[i].belong], 
+                "peer_nodes_list": [orderArr2[i].machine_id], 
                 "additional": {},
-                "session_id": MacArrInfo.session_id,
-                "session_id_sign": MacArrInfo.session_id_sign
+                "session_id": orderArr2[i].session_id,
+                "session_id_sign": orderArr2[i].session_id_sign
               }
             })
           } catch (err) {
@@ -125,93 +96,42 @@ const checkVirtualStatus = async () => {
               message: err.message
             }
           }
-          if (taskinfo.errcode != undefined || taskinfo.errcode != null) {
-            taskinfo = taskinfo
-          } else {
-            if (orderArr2[i].belong.indexOf('CTC') != -1) {
-              taskinfo = taskinfo.netcongtu
-            } else {
-              taskinfo = taskinfo.mainnet
-            }
-          }
-          if (taskinfo&&taskinfo.errcode == 0) {
-            await OrderInfo.updateOne({_id: orderArr2[i]._id}, {$set:{status: 'closed'}})
-            await MacInfo.updateOne({_id: orderArr2[i].belong}, {$set:{canuseGpu: MacArrInfo.canuseGpu + orderArr2[i].gpu_count}})
-          }
         }
+        await OrderInfo.updateOne({_id: orderArr2[i]._id}, {$set:{orderStatus: 4, status: 'closed', session_id: '', session_id_sign: '', OrderId: ''}})
       }
     }
-    for(let i = 0; i < orderArr3.length; i++){
-      if ((orderArr3[i].ErrorTime + 172800000) < Date.now() && !(orderArr3[i].searchHidden)) {
+    for (let i = 0; i < orderArr3.length; i++) { // processed: ture 退币已处理
+      if ((orderArr3[i].createTime + 172800000) < Date.now() && !(orderArr3[i].searchHidden)) {
         await OrderInfo.updateOne({_id: orderArr3[i]._id}, {$set:{ searchHidden: true }})
       }
-      if (orderArr3[i].orderStatus  == 4) {
-        if (orderArr3[i].status == 'running') {
-          const MacArr = await MacInfo.find({_id: orderArr3[i].belong}).toArray()
-          const MacArrInfo = MacArr[0]
-          let taskinfo = {}
-          try {
-            taskinfo = await httpRequest({
-              url: baseUrl + "/api/v1/tasks/stop/"+orderArr3[i].task_id,
-              method: "post",
-              json: true,
-              headers: {},
-              body: {
-                "peer_nodes_list": [orderArr3[i].belong], 
-                "additional": {},
-                "session_id": MacArrInfo.session_id,
-                "session_id_sign": MacArrInfo.session_id_sign
-              }
-            })
-          } catch (err) {
-            taskinfo = {
-              message: err.message
-            }
-          }
-          if (taskinfo.errcode != undefined || taskinfo.errcode != null) {
-            taskinfo = taskinfo
-          } else {
-            if (orderArr3[i].belong.indexOf('CTC') != -1) {
-              taskinfo = taskinfo.netcongtu
-            } else {
-              taskinfo = taskinfo.mainnet
-            }
-          }
-          if (taskinfo&&taskinfo.errcode == 0) {
-            await OrderInfo.updateOne({_id: orderArr3[i]._id}, {$set:{status: 'closed'}})
-            // await MacInfo.updateOne({_id: orderArr3[i].belong}, {$set:{canuseGpu: MacArrInfo.canuseGpu + orderArr3[i].gpu_count}})
-          }
-        }
-      }
-      if (orderArr3[i].orderStatus  == 6) {
-        if (orderArr3[i].status == "create error" && !(orderArr3[i].processed)) {
-          const MacArr = await MacInfo.find({_id: orderArr3[i].belong}).toArray()
-          const MacArrInfo = MacArr[0]
-          await OrderInfo.updateOne({_id: orderArr3[i]._id}, {$set:{ processed: true }})
-          await MacInfo.updateOne({_id: orderArr3[i].belong}, {$set:{canuseGpu: MacArrInfo.canuseGpu + orderArr3[i].gpu_count}})
-        }
-        if (!(orderArr3[i].Refunded)) {
+      if (orderArr3[i].createTime + 15*60*1000 < Date.now()) {
+        if (!orderArr3[i].processed) {
           await GetApi()
-          let walletArr = await wallet.find({_id: orderArr3[i].belong+orderArr3[i].account}).toArray()
-          let walletinfo = walletArr[0]
-          let accountFromKeyring = await keyring.addFromUri(walletinfo.seed);
+          const walletArr = await wallet.find({_id: orderArr3[i].machine_id+orderArr3[i].account}).toArray()
+          const walletinfo = walletArr[0]
+          let accountFromKeyring = keyring.addFromUri(walletinfo.seed);
           const siPower = new BN(15)
-          const bob = inputToBn(String(orderArr3[i].dbc-1), siPower, 15)
+          const bob = inputToBn(String(orderArr3[i].dbc-11), siPower, 15)
           await cryptoWaitReady();
           await api.tx.balances
           .transfer( orderArr3[i].account, bob )
           .signAndSend( accountFromKeyring , ( { events = [], status , dispatchError  } ) => {
             if (status.isInBlock) {
               events.forEach( async ({ event: { method, data: [error] } }) => {
-                if(method == 'ExtrinsicSuccess'){
-                  let Info1 = null
-                  // let virInfo1 = null
+                if (method == 'ExtrinsicSuccess') {
                   if (conn == null) {
                     conn = await MongoClient.connect(url, { useUnifiedTopology: true })
-                    Info1 = conn.db("identifier").collection("virOrderInfo")
                   }
-                  await Info1.updateOne({_id: orderArr3[i]._id}, {$set:{ Refunded: true }})
-                  if (conn != null){
+                  const Info1 = conn.db("identifier").collection("virOrderInfo")
+                  const MacInfo1 = conn.db("identifier").collection("MachineDetailsInfo")
+                  const MacArr = await MacInfo1.find({_id: orderArr3[i].machine_id}).toArray()
+                  const MacArrInfo = MacArr[0]
+                  await Info1.updateOne({_id: orderArr3[i]._id}, {$set:{ processed: true }})
+                  await MacInfo1.updateOne({_id: orderArr3[i].machine_id}, {$set:{CanUseGpu: Number(MacArrInfo.CanUseGpu) + Number(orderArr3[i].gpu_count)}})
+                  if (Number(MacArrInfo.CanUseGpu) + Number(orderArr3[i].gpu_count) == MacArrInfo.gpu_num) {
+                    await MacInfo1.updateOne({_id: orderArr3[i].machine_id}, {$set:{ hasSignle: false}})
+                  }
+                  if (conn != null) {
                     conn.close()
                     conn = null
                   }
@@ -220,6 +140,36 @@ const checkVirtualStatus = async () => {
             }
           })
         }
+      }
+    }
+    for (let i = 0; i < orderArr4.length; i++) { // processed: ture 退币已处理
+      if (errRefund && !processed) {
+        await GetApi()
+        const walletArr = await wallet.find({_id: orderArr4[i].machine_id+orderArr4[i].account}).toArray()
+        const walletinfo = walletArr[0]
+        let accountFromKeyring = keyring.addFromUri(walletinfo.seed);
+        const siPower = new BN(15)
+        const bob = inputToBn(String(orderArr4[i].dbc-1), siPower, 15)
+        await cryptoWaitReady();
+        await api.tx.balances
+        .transfer( orderArr4[i].account, bob )
+        .signAndSend( accountFromKeyring , ( { events = [], status , dispatchError  } ) => {
+          if (status.isInBlock) {
+            events.forEach( async ({ event: { method, data: [error] } }) => {
+              if (method == 'ExtrinsicSuccess') {
+                if (conn == null) {
+                  conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+                }
+                const Info1 = conn.db("identifier").collection("virOrderInfo")
+                await Info1.updateOne({_id: orderArr4[i]._id}, {$set:{ processed: true }})
+                if (conn != null) {
+                  conn.close()
+                  conn = null
+                }
+              }
+            });
+          }
+        })
       }
     }
   } catch (err) {

@@ -93,7 +93,8 @@ const checkVirtualStatus = async () => {
     const wallet = conn.db("identifier").collection("temporaryWallet")
     const virInfo = conn.db("identifier").collection("virtualTask")
     const security = conn.db("identifier").collection("securityGroup")
-    const getSession = conn.db("identifier").collection("sessionInfo");
+    const getSession = conn.db("identifier").collection("sessionInfo")
+    const machineInfo = conn.db("identifier").collection("MachineDetailsInfo")
     let orderArr1 = await Info.find({orderStatus: 2}).toArray() // 查询订单中待确认租用的订单
     let orderArr2 = await Info.find({orderStatus: 3}).toArray() // 查询订单中正在使用中的订单
     let orderArr3 = await Info.find({orderStatus: 4}).toArray() // 查询订单中结束的订单
@@ -102,7 +103,8 @@ const checkVirtualStatus = async () => {
     let orderArr6 = await Info.find({errRefund: true}).toArray() // 查询退币失败的订单
     for(let i = 0; i < orderArr1.length; i++){
       if (orderArr1[i].createTime + 15*60*1000 < Date.now()) {
-        await Info.updateOne({_id: orderArr1[i]._id}, {$set:{orderStatus: 6, network_name: ''}})
+        await Info.updateOne({_id: orderArr1[i]._id}, {$set:{orderStatus: 6, network_name: '', OrderId: ''}})
+        await machineInfo.updateOne({_id: orderArr1[i].machine_id}, {$set: {CanUseGpu: orderArr1[i].gpu_num}})
         await GetApi()
         let walletArr = await wallet.find({_id: orderArr1[i]._id}).toArray()
         let walletinfo = walletArr[0]
@@ -124,7 +126,7 @@ const checkVirtualStatus = async () => {
                 Info1 = conn1.db("identifier").collection("VirtualInfo")
                   // virInfo1 = conn.db("identifier").collection("virtualTask")
                 // await virInfo1.deleteMany({ belong: orderArr1[i]._id })
-                await Info1.updateOne({_id: orderArr1[i]._id}, {$set:{orderStatus: 5, network_name: ''}}) // 订单取消
+                await Info1.updateOne({_id: orderArr1[i]._id}, {$set:{orderStatus: 5, network_name: '', OrderId: ''}}) // 订单取消
                 if (conn1 != null){
                   conn1.close()
                   conn1 = null
@@ -139,7 +141,8 @@ const checkVirtualStatus = async () => {
       if (orderArr2[i].createTime + orderArr2[i].day*24*60*60*1000 < Date.now()) {
         // let info = await machinesInfo(orderArr2[i].machine_id)
         // if (Object.keys(info.machine_status)[0] == 'Online') {
-          await Info.updateOne({_id: orderArr2[i]._id}, {$set:{orderStatus: 4, network_name: ''}}) // 订单结束
+          await Info.updateOne({_id: orderArr2[i]._id}, {$set:{orderStatus: 4, network_name: '', OrderId: ''}}) // 订单结束
+          await machineInfo.updateOne({_id: orderArr2[i].machine_id}, {$set: {CanUseGpu: orderArr2[i].gpu_num}})
         // }
       }
     }
@@ -161,7 +164,7 @@ const checkVirtualStatus = async () => {
         let walletArr = await wallet.find({_id: orderArr3[i]._id}).toArray()
         let walletinfo = walletArr[0]
         let accountFromKeyring = keyring.addFromUri(walletinfo.seed);
-        if (orderArr3[i].reportErr.indexOf('ending') != -1) {
+        if (orderArr3[i].reportErr&&orderArr3[i].reportErr.indexOf('ending') != -1) {
           const wallet_stake = await getStake(walletinfo.wallet)
           const refundCoin = (wallet_stake.staked_amount*0.6 - wallet_stake.used_stake)/0.6
           const siPower = new BN(15)
@@ -252,7 +255,7 @@ const checkVirtualStatus = async () => {
                 let conn1 = null
                 conn1 = await MongoClient.connect(url, { useUnifiedTopology: true })
                 Info1 = conn1.db("identifier").collection("VirtualInfo")
-                await Info1.updateOne({_id: orderArr4[i]._id}, {$set:{orderStatus: 5, network_name: ''}}) // 订单取消
+                await Info1.updateOne({_id: orderArr4[i]._id}, {$set:{orderStatus: 5, network_name: '', OrderId: ''}}) // 订单取消
                 if (conn1 != null){
                   conn1.close()
                   conn1 = null
@@ -270,7 +273,7 @@ const checkVirtualStatus = async () => {
         if (rentOrd.rent_status == 'Renting' && rentOrd.renter == walletinfo.wallet) {
           await Info1.updateOne({_id: orderArr4[i]._id}, {$set:{orderStatus: 3}}) // 订单出错，但已被租用
         } else {
-          await Info1.updateOne({_id: orderArr4[i]._id}, {$set:{orderStatus: 5, network_name: ''}}) // 订单取消
+          await Info1.updateOne({_id: orderArr4[i]._id}, {$set:{orderStatus: 5, network_name: '', OrderId: ''}}) // 订单取消
         }
         if (conn1 != null){
           conn1.close()

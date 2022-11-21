@@ -3,12 +3,13 @@
 //导入express模块
 import express from 'express'
 // 导入路由模块
-import { Signle } from './machine.js'
+import { Signle } from './signleMac.js'
+// import { Signle } from './machine.js'
 import { Select } from './SelectApi.js'
 import { getAuditList } from './auditListApi.js'
-import { rentVirtual } from './RentVirtualApi.js'
+import { rentVirtual } from './RentVirtualApiNew.js'
 import { Recharge } from './PaypalApi.js'
-import { signleRentVir } from './signleRentVir.js'
+import { signleRentVir } from './signleRentVirNew.js'
 import { Security } from './security.js'
 // 定义serve
 const serve = express()

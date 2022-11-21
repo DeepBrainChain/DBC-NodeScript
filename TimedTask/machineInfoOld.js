@@ -32,7 +32,7 @@ const getBlockTime = async (type) => {
 }
 
 /**
- * liveMachine 获取两条链上机器所有可用机器信息（online_machine， rented_machine）
+ * liveMachine 获取两条链上机器所有可用机器信息（online_machine， rented_machine， offline_machine）
  * @param permas
  */
  export const liveMachine = async () => {
@@ -147,9 +147,6 @@ const getMachine = async () => {
               MachineInfo.city = ''
               MachineInfo.address = ''
             }
-            // 单个虚拟机
-            MachineInfo.CanUseGpu = MachineInfo.gpu_num
-            MachineInfo.hasSignle = false
             MachineInfo._id = MachineInfo.machine_id
             machineArr_add.push(MachineInfo)
           }
@@ -168,26 +165,107 @@ const getMachine = async () => {
     }
   }
 }
+const getvirMachine = async () => {
+  // 获取添加到租用虚拟机的机器
+  try {
+    conn1 = await MongoClient.connect(url, { useUnifiedTopology: true })
+    const virMachine = conn1.db("identifier").collection("virMachine")
+    const test = conn1.db("identifier").collection("MachineDetailsInfo")
+    const virMacInfo = conn1.db("identifier").collection("virMachineInfo")
+    const virArr = await virMachine.find({'_id': 'virtual_machine_list'}).toArray()
+    const vir_machinelist = virArr[0] ? virArr[0].machineList : []
+    if (vir_machinelist.length) {
+      for (let i= 0; i< vir_machinelist.length; i++) {
+        let block = await getBlockTime('chain')
+        const EndTime = Math.floor((vir_machinelist[i].rent_end - block)/2/60)
+        let virinfo = await virMacInfo.find({_id: vir_machinelist[i].machine_id}).toArray()
+        let infoArr = await test.find({ _id: vir_machinelist[i].machine_id }).project({ _id: 0 }).toArray()
+        if (virinfo.length) {
+          let gpuNum = {}
+          let canuseGpu = 0
+          try {
+            gpuNum = await httpRequest({
+              url: baseUrl + "/api/v1/mining_nodes",
+              method: "post",
+              json: true,
+              headers: {},
+              body: {
+                "peer_nodes_list": [vir_machinelist[i].machine_id], 
+                "additional": {
+                  
+                }
+              }
+            })
+          } catch (err) {
+            gpuNum = {
+              message: err.message
+            }
+          }
+          if (gpuNum&&gpuNum.errcode == 0) {
+            if (gpuNum.netcongtu || gpuNum.mainnet) {
+              if (vir_machinelist[i].machine_id.indexOf('CTC') != -1) {
+                gpuNum = newsession.netcongtu
+              } else {
+                gpuNum = newsession.mainnet
+              }
+            } else {
+              gpuNum = gpuNum
+            }
+            let getgpu = gpuNum.message.gpu
+            canuseGpu = getgpu.gpu_count - getgpu.gpu_used
+          } else {
+            canuseGpu = virinfo[0].canuseGpu
+          }
+          await virMacInfo.updateOne({ _id: vir_machinelist[i].machine_id }, { $set: { EndTime: EndTime, canuseGpu: canuseGpu, ...vir_machinelist[i], ...infoArr[0] }})
+        } else {
+          await virMacInfo.insertOne({
+            _id: vir_machinelist[i].machine_id,
+            canuseGpu: infoArr[0].gpu_num,
+            ...vir_machinelist[i],
+            EndTime: EndTime, 
+            ...infoArr[0]
+          })
+        }
+      }
+    }
+    
+  } catch (error) {
+    console.log(error, 'getvirMachine')
+  } finally {
+    if (conn1 != null){
+      conn1.close()
+      conn1 = null
+    }
+  }
+}
+
+getMachine();
+getvirMachine();
 
 export const scheduleCronstyle = () => {
-  getMachine();
   schedule.scheduleJob('00 50 * * * *',function(){
     getMachine();
+    getvirMachine();
   });
   schedule.scheduleJob('00 40 * * * *',function(){
     getMachine();
+    getvirMachine();
   });
   schedule.scheduleJob('00 30 * * * *',function(){
     getMachine();
+    getvirMachine();
   });
   schedule.scheduleJob('00 20 * * * *',function(){
     getMachine();
+    getvirMachine();
   });
   schedule.scheduleJob('00 10 * * * *',function(){
     getMachine();
+    getvirMachine();
   });
   schedule.scheduleJob('00 01 * * * *',function(){
     getMachine();
+    getvirMachine();
   });
 }
 
