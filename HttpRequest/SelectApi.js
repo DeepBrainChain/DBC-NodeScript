@@ -214,23 +214,30 @@ Select.post('/getlistByCity', urlEcode, async (request, response ,next) => {
       conn = await MongoClient.connect(url, { useUnifiedTopology: true })
       const test = conn.db("identifier").collection("MachineDetailsInfo")
       let arr = []
+      let allArr = []
       if (status && gpu_num && status != '' && gpu_num != '') {
         arr= await test.find({"country": country, "city": city, "gpu_num": gpu_num, "machine_status": status}).skip(perams[0]).limit((perams[1])).toArray()
+        allArr = await test.find({"country": country, "city": city, "gpu_num": gpu_num, "machine_status": status}).toArray()
       } else if (status && status != '') {
         arr= await test.find({"country": country, "city": city, "machine_status": status}).skip(perams[0]).limit((perams[1])).toArray()
+        allArr = await test.find({"country": country, "city": city, "machine_status": status}).toArray()
       } else if (gpu_num && gpu_num != '') {
         arr= await test.find({"country": country, "city": city, "gpu_num": gpu_num}).skip(perams[0]).limit((perams[1])).toArray()
+        allArr = await test.find({"country": country, "city": city, "gpu_num": gpu_num}).toArray()
       } else {
         arr= await test.find({"country": country, "city": city}).skip(perams[0]).limit((perams[1])).toArray()
+        allArr = await test.find({"country": country, "city": city}).toArray()
       }
       let totalArray = await test.find({"country": country, "city": city}).toArray()
       let totalOnlineArray = await test.find({"country": country, "city": city, machine_status: "online"}).toArray()
       const total = totalArray.length
       const onlinetotal = totalOnlineArray.length
+      const typeTotal = allArr.length
       let data = {
         list: arr,
         total: total,
-        online: onlinetotal
+        online: onlinetotal,
+        typeTotal: typeTotal
       }
       response.json({
         success: true,
@@ -302,23 +309,30 @@ Select.post('/getlistByRoom', urlEcode, async (request, response ,next) => {
       conn = await MongoClient.connect(url, { useUnifiedTopology: true })
       const test = conn.db("identifier").collection("MachineDetailsInfo")
       let arr = []
+      let allArr = []
       if (status && gpu_num && status != '' && gpu_num != '') {
         arr = await test.find({"server_room": roomnum, "gpu_num": gpu_num, "machine_status": status}).skip(perams[0]).limit((perams[1])).toArray()
+        allArr = await test.find({"server_room": roomnum, "gpu_num": gpu_num, "machine_status": status}).toArray()
       } else if (status && status != '') {
         arr = await test.find({"server_room": roomnum, "machine_status": status}).skip(perams[0]).limit((perams[1])).toArray()
+        allArr = await test.find({"server_room": roomnum, "machine_status": status}).toArray()
       } else if (gpu_num && gpu_num != '') {
         arr = await test.find({"server_room": roomnum, "gpu_num": gpu_num}).skip(perams[0]).limit((perams[1])).toArray()
+        allArr = await test.find({"server_room": roomnum, "gpu_num": gpu_num}).toArray()
       } else {
         arr = await test.find({"server_room": roomnum}).skip(perams[0]).limit((perams[1])).toArray()
+        allArr = await test.find({"server_room": roomnum}).toArray()
       }
       let totalArray = await test.find({"server_room": roomnum}).toArray()
       let totalOnlineArray = await test.find({"server_room": roomnum, machine_status: "online"}).toArray()
       const total = totalArray.length
       const onlinetotal = totalOnlineArray.length
+      const typeTotal = allArr.length
       let data = {
         list: arr,
         total: total,
-        online: onlinetotal
+        online: onlinetotal,
+        typeTotal: typeTotal
       }
       response.json({
         success: true,

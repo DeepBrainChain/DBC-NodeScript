@@ -5,12 +5,12 @@ import minimist from "minimist";
 
 let api  = null
 const keyring = new Keyring({ type: "sr25519" });
-const args = minimist(process.argv.slice(2), { string: ['key', 'data'] });
+const args = minimist(process.argv.slice(2), { string: ['key', 'day'] });
 // 链上交互
 // 链上交互
 export const GetApi = async () =>{
   if (!api) {
-    const provider = new WsProvider('wss://infotest.dbcwallet.io:7777') // c测试链
+    const provider = new WsProvider('wss://info.dbcwallet.io')
     api = await ApiPromise.create({ 
       provider ,
       types: {
@@ -21,6 +21,7 @@ export const GetApi = async () =>{
         "URL": "Text",
         "MachineId": "Text",
         "TelecomName": "Text",
+        "RentOrderId": "u64",
         "FoundationIssueRewards": {
           "who": "Vec<AccountId>",
           "left_reward_times": "u32",
@@ -85,7 +86,7 @@ export const GetApi = async () =>{
         "MachineInfo": {
           "controller": "AccountId",
           "machine_stash": "AccountId",
-          "last_machine_renter": "Option<AccountId>",
+          "renters": "Vec<AccountId>",
           "last_machine_restake": "BlockNumber",
           "bonding_height": "BlockNumber",
           "online_height": "BlockNumber",
@@ -93,7 +94,7 @@ export const GetApi = async () =>{
           "init_stake_per_gpu": "Balance",
           "stake_amount": "Balance",
           "machine_status": "MachineStatus",
-          "total_rented_duration": "u64",
+          "total_rented_duration": "BlockNumber",
           "total_rented_times": "u64",
           "total_rent_fee": "Balance",
           "total_burn_fee": "Balance",
@@ -313,6 +314,7 @@ export const GetApi = async () =>{
           "reporter_stake": "Balance",
           "first_book_time": "BlockNumber",
           "machine_id": "MachineId",
+          "rent_order_id": "RentOrderId",
           "err_info": "Vec<u8>",
           "verifying_committee": "Option<AccountId>",
           "booked_committee": "Vec<AccountId>",
@@ -343,7 +345,7 @@ export const GetApi = async () =>{
         },
         "MachineFaultType": {
           "_enum": {
-            "RentedInaccessible": "MachineId",
+            "RentedInaccessible": "(MachineId, RentOrderId)",
             "RentedHardwareMalfunction": "(ReportHash, BoxPubkey)",
             "RentedHardwareCounterfeit": "(ReportHash, BoxPubkey)",
             "OnlineRentFailed": "(ReportHash, BoxPubkey)"
@@ -369,7 +371,8 @@ export const GetApi = async () =>{
           "slash_time": "BlockNumber",
           "slash_amount": "Balance",
           "slash_exec_time": "BlockNumber",
-          "reward_to_reporter": "Option<AccountId>",
+          "reporter": "Option<AccountId>",
+          "renters": "Vec<AccountId>",
           "reward_to_committee": "Option<Vec<AccountId>>",
           "slash_reason": "OPSlashReason"
         },
@@ -398,15 +401,22 @@ export const GetApi = async () =>{
           "snap_len": "u64"
         },
         "RentOrderDetail": {
+          "machine_id": "MachineId",
           "renter": "AccountId",
           "rent_start": "BlockNumber",
           "confirm_rent": "BlockNumber",
           "rent_end": "BlockNumber",
           "stake_amount": "Balance",
-          "rent_status": "RentStatus"
+          "rent_status": "RentStatus",
+          "gpu_num": "u32",
+          "gpu_index": "Vec<u32>"
         },
         "RentStatus": {
           "_enum": ["WaitingVerifying", "Renting", "RentExpired"]
+        },
+        "MachineGPUOrder": {
+          "rent_order": "Vec<RentOrderId>",
+          "used_gpu": "Vec<u32>"
         },
         "CommitteeStakeParamsInfo": {
           "stake_baseline": "Balance",
@@ -437,12 +447,35 @@ export const GetApi = async () =>{
   return { api }
 }
 
-let machineList= []
+// Example
+
+/**
+ * 1. 添加租用机器的列表
+ *  let machineList= [
+      {
+        id: '', 机器ID
+        gpu_num: 4 租用卡数
+      }
+    ]
+ * 
+ * 2. 执行JS
+ * 
+ * node rentMachineBatch.js --key 0x11111 --day 2
+ * key 为 种子
+ * day 为租用天数
+ */
+
+let machineList = [
+  {
+    id: '1c72cba3469c7c41c718f799d4cfa353f866730d937a2e2b2b9b897569927901',
+    gpu_num: 2
+  }
+]
 
 export const utility = async (value) => {
   await GetApi();
   let newArray = machineList.map( res=> {
-    return api.tx.rentMachine.rentMachine(res, value)
+    return api.tx.rentMachine.rentMachine(res.id, res.gpu_num, Number(value)*2880)
   })
   let accountFromKeyring = await keyring.addFromUri(args["key"]);
   await cryptoWaitReady();
@@ -452,21 +485,13 @@ export const utility = async (value) => {
     
     if (status.isInBlock) {
       events.forEach(async ({ event: { method, data: [error] } }) => {
-        // console.log(method, error, error.words, 'method');
         if (method == 'BatchInterrupted') {
-          // const decoded = api?.registry.findMetaError(error.asModule);
           console.log('ExtrinsicFiles--->'+ '成功执行：' + error.words)
         }else if(method == 'BatchCompleted'){
           console.log('ExtrinsicSuccess: 全部执行')
         }
       });
     }
-
-    // console.log(`{"Tx_status:":"${status.type}"}`);
-    // if (status.isInBlock) {
-    //   console.log(`included in ${status.asInBlock}`);
-    //   process.exit(0)
-    // }
   })
 }
-utility(args["data"]).catch((error) => console.log(error.message))
+utility(args["day"]).catch((error) => console.log(error.message))

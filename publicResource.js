@@ -886,9 +886,9 @@ export const typeJson = {
  */
 export const wssChain = {
   // dbc: 'wss://congtuinfo.dbcwallet.io:7777', // 聪图云私链测试链
-  dbc: 'wss://infotest.dbcwallet.io:7777', // 公链测试链
+  // dbc: 'wss://infotest.dbcwallet.io:7777', // 公链测试链
   // dbc: 'wss://wssrentgpu.dbcwallet.io:9001' // 单卡租用测试链
-  // dbc: 'wss://info.dbcwallet.io' // 公链正式链
+  dbc: 'wss://info.dbcwallet.io' // 公链正式链
 }
 
 /**

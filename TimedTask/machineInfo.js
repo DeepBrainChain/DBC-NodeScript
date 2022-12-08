@@ -55,6 +55,18 @@ const getBlockTime = async (type) => {
   return info
 }
 
+/**
+ * machineInfo 获取链上机器租用的信息
+ * @param permas
+ */
+ export const machineRentOrder = async (machineId) => {
+  let info = null
+  await GetApi()
+  info = await api.query.rentMachine.machineRentOrder(machineId)
+  info = info.toJSON()
+  return info.used_gpu.length
+}
+
 export const getMacStach = async (wallet) => {
   let stachname = ''
   await GetApi()
@@ -97,7 +109,9 @@ const getMachine = async () => {
   try {
     let list = await liveMachine()
     if (list.length) {
-      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      if (conn == null) {
+        conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      }
       const machineConn = conn.db("identifier").collection("MachineDetailsInfo")
       let machineArr_add = []
       let hasMachine = await machineConn.aggregate([{$group:{_id: '$machine_id'}}]).toArray()
@@ -115,14 +129,32 @@ const getMachine = async () => {
           // East 东 West 西 South 南 North 北   lat 纬度 lng 经度
           // 南纬是负，北纬是正，东经是正，西经是负。
           const MachineInfo = flatObject(info)
+          let rentOrderLength = 0
+          if (MachineInfo.machine_status != 'online') {
+            rentOrderLength = await machineRentOrder(list[i])
+          }
           MachineInfo.gpuType = hexToString(MachineInfo.gpu_type)
           MachineInfo.cpuType = hexToString(MachineInfo.cpu_type)
           MachineInfo.machine_name = await getMacStach(MachineInfo.machine_stash)
           delete MachineInfo.cpu_type
           delete MachineInfo.gpu_type
-          const machineFindArr = await machineConn.find({_id: MachineInfo.machine_id}).toArray()
+          if (conn == null) {
+            conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+          }
+          const machineConn2 = conn.db("identifier").collection("MachineDetailsInfo")
+          const machineFindArr = await machineConn2.find({_id: MachineInfo.machine_id}).toArray()
           if (machineFindArr.length) {
-            await machineConn.updateOne({_id: MachineInfo.machine_id}, {$set: MachineInfo})
+            if (conn == null) {
+              conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+            }
+            const machineConn1 = conn.db("identifier").collection("MachineDetailsInfo")
+            // 单个虚拟机
+            if (MachineInfo.machine_status != 'online') {
+              MachineInfo.CanUseGpu = MachineInfo.gpu_num - rentOrderLength
+            } else {
+              MachineInfo.CanUseGpu = MachineInfo.gpu_num
+            }
+            await machineConn1.updateOne({_id: MachineInfo.machine_id}, {$set: MachineInfo})
           } else {
             const lng = MachineInfo['east'] ? (MachineInfo['east'] / Math.pow(10, 4)) : -(MachineInfo['west'] / Math.pow(10, 4));
             const lat = MachineInfo['north'] ? (MachineInfo['north'] / Math.pow(10, 4)) : -(MachineInfo['south'] / Math.pow(10, 4));
@@ -148,7 +180,11 @@ const getMachine = async () => {
               MachineInfo.address = ''
             }
             // 单个虚拟机
-            MachineInfo.CanUseGpu = MachineInfo.gpu_num
+            if (MachineInfo.machine_status != 'online') {
+              MachineInfo.CanUseGpu = MachineInfo.gpu_num - rentOrderLength
+            } else {
+              MachineInfo.CanUseGpu = MachineInfo.gpu_num
+            }
             MachineInfo.hasSignle = false
             MachineInfo._id = MachineInfo.machine_id
             machineArr_add.push(MachineInfo)
@@ -156,7 +192,11 @@ const getMachine = async () => {
         }
       }
       if (machineArr_add.length != 0) {
-        await machineConn.insertMany(machineArr_add)
+        if (conn == null) {
+          conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+        }
+        const machineConn1 = conn.db("identifier").collection("MachineDetailsInfo")
+        await machineConn1.insertMany(machineArr_add)
       }
     }
   } catch (err) {
@@ -171,6 +211,21 @@ const getMachine = async () => {
 
 export const scheduleCronstyle = () => {
   getMachine();
+  schedule.scheduleJob('00 55 * * * *',function(){
+    getMachine();
+  });
+  schedule.scheduleJob('00 45 * * * *',function(){
+    getMachine();
+  });
+  schedule.scheduleJob('00 35 * * * *',function(){
+    getMachine();
+  });
+  schedule.scheduleJob('00 25 * * * *',function(){
+    getMachine();
+  });
+  schedule.scheduleJob('00 15 * * * *',function(){
+    getMachine();
+  });
   schedule.scheduleJob('00 50 * * * *',function(){
     getMachine();
   });

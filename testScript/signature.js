@@ -11,12 +11,12 @@ const args = minimist(process.argv.slice(2), { string:['key'] })
 // var json = fs.readFileSync('demo.json')
 
 const CreateSignature = async (password) => {
-  // let nonce = randomWord();
+  let nonce = randomWord();
   // let jsonStr4 = JSON.parse(json.toString())
   await cryptoWaitReady();
   // let signUrl = keyring.addFromJson(jsonStr4);
   // signUrl.unlock(password)
-  let msg = args["msg"]
+  let msg = args["msg"] ? args["msg"] : nonce
   let signUrl = await keyring.addFromUri(args["key"]);
   const signature = signUrl.sign(msg);
   console.log(
