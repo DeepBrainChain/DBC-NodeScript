@@ -143,6 +143,7 @@ const getMachine = async () => {
           }
           const machineConn2 = conn.db("identifier").collection("MachineDetailsInfo")
           const machineFindArr = await machineConn2.find({_id: MachineInfo.machine_id}).toArray()
+          
           if (machineFindArr.length) {
             if (conn == null) {
               conn = await MongoClient.connect(url, { useUnifiedTopology: true })
@@ -154,7 +155,40 @@ const getMachine = async () => {
             } else {
               MachineInfo.CanUseGpu = MachineInfo.gpu_num
             }
-            await machineConn1.updateOne({_id: MachineInfo.machine_id}, {$set: MachineInfo})
+            const machineFindTnfo = machineFindArr[0]
+            const lngNum = machineFindTnfo['east'] ? (machineFindTnfo['east'] / Math.pow(10, 4)) : -(machineFindTnfo['west'] / Math.pow(10, 4));
+            const latNum = machineFindTnfo['north'] ? (machineFindTnfo['north'] / Math.pow(10, 4)) : -(machineFindTnfo['south'] / Math.pow(10, 4));
+            const lngNum1 = MachineInfo['east'] ? (MachineInfo['east'] / Math.pow(10, 4)) : -(MachineInfo['west'] / Math.pow(10, 4));
+            const latNum1 = MachineInfo['north'] ? (MachineInfo['north'] / Math.pow(10, 4)) : -(MachineInfo['south'] / Math.pow(10, 4));
+            if (lngNum == lngNum1 && latNum == latNum1) {
+              await machineConn1.updateOne({_id: MachineInfo.machine_id}, {$set: MachineInfo})
+            } else {
+              const lng = MachineInfo['east'] ? (MachineInfo['east'] / Math.pow(10, 4)) : -(MachineInfo['west'] / Math.pow(10, 4));
+              const lat = MachineInfo['north'] ? (MachineInfo['north'] / Math.pow(10, 4)) : -(MachineInfo['south'] / Math.pow(10, 4));
+              const string = lat+','+lng
+              try {
+                VirInfo = await httpRequest({
+                  url: `https://api.map.baidu.com/reverse_geocoding/v3/?ak=jQc7i76SLm2k5j54z5y6ppjWjhb0nlhC&output=json&coordtype=wgs84ll&location=${string}`,
+                  method: "get",
+                  json: true
+                })
+              } catch (err) {
+                VirInfo = {
+                  message: err.message
+                }
+              }
+              if (VirInfo.status == 0) {
+                MachineInfo.country = VirInfo.result.addressComponent.country
+                MachineInfo.city = VirInfo.result.addressComponent.city
+                MachineInfo.address = VirInfo.result.formatted_address
+              } else {
+                MachineInfo.country = ''
+                MachineInfo.city = ''
+                MachineInfo.address = ''
+              }
+              await machineConn1.updateOne({_id: MachineInfo.machine_id}, {$set: MachineInfo})
+            }
+            
           } else {
             const lng = MachineInfo['east'] ? (MachineInfo['east'] / Math.pow(10, 4)) : -(MachineInfo['west'] / Math.pow(10, 4));
             const lat = MachineInfo['north'] ? (MachineInfo['north'] / Math.pow(10, 4)) : -(MachineInfo['south'] / Math.pow(10, 4));

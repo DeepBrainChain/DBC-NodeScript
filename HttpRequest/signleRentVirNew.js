@@ -682,7 +682,7 @@ signleRentVir.post('/createSignleVir', urlEcode, async (request, response ,next)
           content: virOrderId
         })
       } else {
-        if (VirInfo.message == 'ssh_port is occupied') {
+        if (VirInfo.message == 'ssh_port is occupied' || VirInfo.message.indexOf('port conflict, exist ssh_port') != -1 || VirInfo.message.indexOf('port conflict, exist rdp_port') != -1) {
           await orderInfo.insertOne({
             _id: randomWord7(),
             machine_id: machine_id,
@@ -699,7 +699,7 @@ signleRentVir.post('/createSignleVir', urlEcode, async (request, response ,next)
             msg: 'SSH端口重复，请重新创建',
             success: false
           })
-        } else if (VirInfo.message == 'vnc_port is occupied') {
+        } else if (VirInfo.message == 'vnc_port is occupied' || VirInfo.message.indexOf('port conflict, exist vnc_port') != -1) {
           await orderInfo.updateOne({_id: virOrderId}, {$set : { vnc_port: Number(ordercon.vnc_port)+1 }})
           response.json({
             code: -5,
@@ -748,7 +748,7 @@ signleRentVir.post('/createSignleVir', urlEcode, async (request, response ,next)
     conn = await MongoClient.connect(url, { useUnifiedTopology: true })
     if(virOrderId&&status) {
       // 查询虚拟机订单信息
-      const VirOrder = conn.db("identifier").collection("virOrderInfo")
+      const VirOrder = await conn.db("identifier").collection("virOrderInfo")
       if (status === 5) {
         await VirOrder.updateOne({_id: virOrderId}, { $set: {orderStatus: 5, ErrorTime: Date.now()}})
         response.json({
