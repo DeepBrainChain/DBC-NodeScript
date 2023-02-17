@@ -404,7 +404,7 @@ signleRentVir.post('/createSignleVirOrder', urlEcode, async (request, response ,
             if (error.isModule && method == 'ExtrinsicFailed') {
               const decoded = await api.registry.findMetaError(error.asModule)
               const siPower = new BN(15)
-              const bob = inputToBn(String(dbc-10), siPower, 15)
+              const bob = inputToBn(String(dbc-11), siPower, 15)
               await cryptoWaitReady();
               await api.tx.balances
               .transfer( account, bob )
@@ -1201,7 +1201,7 @@ signleRentVir.post('/rentagain', urlEcode, async (request, response ,next) => {
             if (error.isModule && method == 'ExtrinsicFailed') {
               const decoded = await api.registry.findMetaError(error.asModule)
               const siPower = new BN(15)
-              const bob = inputToBn(String(dbc-10), siPower, 15)
+              const bob = inputToBn(String(dbc-11), siPower, 15)
               await cryptoWaitReady();
               await api.tx.balances
               .transfer( account, bob )

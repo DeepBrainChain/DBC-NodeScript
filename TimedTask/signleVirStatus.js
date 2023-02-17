@@ -111,7 +111,7 @@ const checkVirtualStatus = async () => {
           const walletinfo = walletArr[0]
           let accountFromKeyring = keyring.addFromUri(walletinfo.seed);
           const siPower = new BN(15)
-          const bob = inputToBn(String(orderArr3[i].dbc-11), siPower, 15)
+          const bob = inputToBn(String(orderArr3[i].dbc-21), siPower, 15)
           await cryptoWaitReady();
           await api.tx.balances
           .transfer( orderArr3[i].account, bob )
@@ -149,7 +149,7 @@ const checkVirtualStatus = async () => {
         const walletinfo = walletArr[0]
         let accountFromKeyring = keyring.addFromUri(walletinfo.seed);
         const siPower = new BN(15)
-        const bob = inputToBn(String(orderArr4[i].dbc-1), siPower, 15)
+        const bob = inputToBn(String(orderArr4[i].dbc-11), siPower, 15)
         await cryptoWaitReady();
         await api.tx.balances
         .transfer( orderArr4[i].account, bob )
