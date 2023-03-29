@@ -154,6 +154,7 @@ const getMachine = async () => {
               MachineInfo.CanUseGpu = MachineInfo.gpu_num - rentOrderLength
             } else {
               MachineInfo.CanUseGpu = MachineInfo.gpu_num
+              MachineInfo.hasSignle = false
             }
             const machineFindTnfo = machineFindArr[0]
             const lngNum = machineFindTnfo['east'] ? (machineFindTnfo['east'] / Math.pow(10, 4)) : -(machineFindTnfo['west'] / Math.pow(10, 4));

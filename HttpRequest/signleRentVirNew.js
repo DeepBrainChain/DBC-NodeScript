@@ -1039,6 +1039,11 @@ signleRentVir.post('/confirmRent', urlEcode, async (request, response ,next) => 
                 conn = null
               }
             } else if (method == 'ExtrinsicSuccess') {
+              if (conn == null) {
+                conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+              }
+              const virtualInfo1 = await conn.db("identifier").collection("virOrderInfo")
+              await virtualInfo1.updateOne({_id: virOrderId}, {$set:{ confirmRent: true }})
               response.json({
                 success: true,
                 code: 10001,
@@ -1274,7 +1279,6 @@ signleRentVir.post('/rentagain', urlEcode, async (request, response ,next) => {
                   message: err.message
                 }
               }
-              console.log(newsession, 'newsession');
               if (newsession.errcode != undefined || newsession.errcode != null) {
                 newsession = newsession
               } else {
@@ -1635,7 +1639,6 @@ signleRentVir.post('/stopSignleVir', urlEcode, async (request, response ,next) =
             message: err.message
           }
         }
-        console.log(newsession, 'newsession');
         if (newsession.errcode != undefined || newsession.errcode != null) {
           newsession = newsession
         } else {
@@ -1789,7 +1792,6 @@ signleRentVir.post('/startSignleVir', urlEcode, async (request, response ,next) 
             message: err.message
           }
         }
-        console.log(newsession, 'newsession');
         if (newsession.errcode != undefined || newsession.errcode != null) {
           newsession = newsession
         } else {
@@ -1817,10 +1819,10 @@ signleRentVir.post('/startSignleVir', urlEcode, async (request, response ,next) 
           "wallet": walletinfo.wallet,
         }
       }
-      let VirInfo = {}
+      let VirInfo1 = {}
       try {
-        VirInfo = await httpRequest({
-          url: baseUrl + "/api/v1/tasks/start/"+ task_id,
+        VirInfo1 = await httpRequest({
+          url: baseUrl + "/api/v1/tasks/"+ task_id,
           method: "post",
           json: true,
           headers: {},
@@ -1832,49 +1834,101 @@ signleRentVir.post('/startSignleVir', urlEcode, async (request, response ,next) 
           }
         })
       } catch (err) {
-        VirInfo = {
+        VirInfo1 = {
           message: err.message
         }
       }
-      if (VirInfo.errcode != undefined || VirInfo.errcode != null) {
-        VirInfo = VirInfo
+      if (VirInfo1.errcode != undefined || VirInfo1.errcode != null) {
+        VirInfo1 = VirInfo1
       } else {
-        if (VirInfo.netcongtu || VirInfo.mainnet) {
+        if (VirInfo1.netcongtu || VirInfo1.mainnet) {
           if (machine_id.indexOf('CTC') != -1) {
-            VirInfo = VirInfo.netcongtu
+            VirInfo1 = VirInfo1.netcongtu
           } else {
-            VirInfo = VirInfo.mainnet
+            VirInfo1 = VirInfo1.mainnet
           }
         } else {
-          VirInfo = VirInfo
+          VirInfo1 = VirInfo1
         }
       }
-      if (VirInfo && VirInfo.errcode == 0) {
-        response.json({
-          code: 10001,
-          msg: '重启成功',
-          success: true,
-          content: virOrderId
-        })
-        // await search.updateOne({ _id: task_id }, { $set: VirInfo.message })
-        // let resultArr = await search.find({ _id: task_id }).toArray()
-        // const orderMac = await searchMac.find({ _id: machine_id }).project({ _id: 0, session_id: 0, session_id_sign: 0 }).toArray()
-        // const orderInfo = orderMac.length ? orderMac[0] : {}
-        // response.json({
-        //   code: 10001,
-        //   msg:'获取成功',
-        //   success: true,
-        //   content: {
-        //     ...orderInfo,
-        //     ...resultArr[0]
-        //   }
-        // })
+      if (VirInfo1 && VirInfo1.errcode == 0) {
+        if (VirInfo1.message.status == 'running') {
+          await orderInfo.updateOne({_id: virOrderId}, {$set: { status: 'running' }})
+          response.json({
+            code: 10001,
+            msg: '启动成功',
+            success: true,
+            content: virOrderId
+          })
+        } else if (VirInfo1.message.status == 'starting') {
+          await orderInfo.updateOne({_id: virOrderId}, {$set: { status: 'starting' }})
+          response.json({
+            code: 10001,
+            msg: '启动成功',
+            success: true,
+            content: virOrderId
+          })
+        } else {
+          let VirInfo = {}
+          let { nonce: nonce4, signature: sign4 } = await CreateSignature(walletinfo.seed)
+          let requestData1 = {
+            "nonce": nonce4,
+            "sign": sign4,
+            "wallet": walletinfo.wallet,
+          }
+          try {
+            VirInfo = await httpRequest({
+              url: baseUrl + "/api/v1/tasks/start/"+ task_id,
+              method: "post",
+              json: true,
+              headers: {},
+              body: {
+                "peer_nodes_list": [machine_id], 
+                "additional": {},
+                ...requestData1,
+                "rent_order": String(ordercon.OrderId)
+              }
+            })
+          } catch (err) {
+            VirInfo = {
+              message: err.message
+            }
+          }
+          if (VirInfo.errcode != undefined || VirInfo.errcode != null) {
+            VirInfo = VirInfo
+          } else {
+            if (VirInfo.netcongtu || VirInfo.mainnet) {
+              if (machine_id.indexOf('CTC') != -1) {
+                VirInfo = VirInfo.netcongtu
+              } else {
+                VirInfo = VirInfo.mainnet
+              }
+            } else {
+              VirInfo = VirInfo
+            }
+          }
+          if (VirInfo && VirInfo.errcode == 0) {
+            response.json({
+              code: 10001,
+              msg: '启动成功',
+              success: true,
+              content: virOrderId
+            })
+          } else {
+            response.json({
+              code: -3,
+              msg:'启动失败',
+              success: false,
+              content: VirInfo.message
+            })
+          }
+        }
       } else {
         response.json({
           code: -2,
-          msg:'重启失败',
+          msg:'启动失败',
           success: false,
-          content: VirInfo.message
+          content: VirInfo1.message
         })
       }
     }else{

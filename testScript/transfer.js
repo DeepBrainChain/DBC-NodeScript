@@ -2,7 +2,7 @@ import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import { cryptoWaitReady } from '@polkadot/util-crypto';
 import { BN_TEN } from '@polkadot/util';
 import BN from 'bn.js'
-import { typeJson, wssChain, mongoUrl } from '../publicResource.js'
+import { typeJson, wssChain } from '../publicResource.js'
 
 let api  = null
 // 链上交互
@@ -63,3 +63,18 @@ export const transfer1 = async ( value, seed, toWallet) => {
 }
 
 transfer1('39.66', 'your seed', 'transfer wallet');
+
+export const dbcPriceOcw = async () => {
+  await GetApi()
+  let de = await api.query.dbcPriceOcw.avgPrice();
+  console.log(de.toJSON(), 'de');
+  return de.toJSON()
+}
+
+export const importAccountFromSeed = async ( seed ) => {
+  await cryptoWaitReady()
+  console.log(JSON.stringify(keyring.addFromUri(seed)), 'pair');
+  // return keyring.addFromUri(seed)
+}
+
+importAccountFromSeed('0xbb96058371581485a6aacd11027db023723af922dfc49b317ff47b73353355c7')

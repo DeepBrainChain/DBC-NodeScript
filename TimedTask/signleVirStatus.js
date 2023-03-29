@@ -63,9 +63,15 @@ const checkVirtualStatus = async () => {
     let orderArr2 = await OrderInfo.find({orderStatus: 3}).toArray() // 查询订单中正在使用中的订单
     let orderArr3 = await OrderInfo.find({orderStatus: 5}).toArray() // 订单由于无法创建虚拟机取消(如果CanUseGpu等于机器的原始数目，hasSignle变为false,此时需要等15分钟才会开始退币)
     let orderArr4 = await OrderInfo.find({errRefund: true}).toArray() // 查询退币失败的订单
+    let orderArr5 = await OrderInfo.find({orderStatus: 6}).toArray() // 查询订单中处于重新租用但未创建的订单
     for (let i = 0; i < orderArr1.length; i++) {
       if (orderArr1[i].createTime + 15*60*1000 < Date.now()) {
         await OrderInfo.updateOne({_id: orderArr1[i]._id}, {$set:{orderStatus: 5, status: 'closed'}})
+      }
+    }
+    for (let i = 0; i < orderArr5.length; i++) {
+      if (orderArr5[i].createTime + 15*60*1000 < Date.now()) {
+        await OrderInfo.updateOne({_id: orderArr5[i]._id}, {$set:{orderStatus: 5, status: 'closed'}})
       }
     }
     for (let i = 0; i < orderArr2.length; i++) {
@@ -97,7 +103,7 @@ const checkVirtualStatus = async () => {
             }
           }
         }
-        await OrderInfo.updateOne({_id: orderArr2[i]._id}, {$set:{orderStatus: 4, status: 'closed', session_id: '', session_id_sign: '', OrderId: ''}})
+        await OrderInfo.updateOne({_id: orderArr2[i]._id}, {$set:{orderStatus: 4, status: 'closed', session_id: '', session_id_sign: '', OrderId: '', confirmRent: false}})
       }
     }
     for (let i = 0; i < orderArr3.length; i++) { // processed: ture 退币已处理
