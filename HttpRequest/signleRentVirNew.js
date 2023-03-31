@@ -442,6 +442,12 @@ signleRentVir.post('/createSignleVirOrder', urlEcode, async (request, response ,
                     }
                   });
                 }
+              }).catch((err) => {
+                response.json({
+                  code: -8,
+                  msg:err.message,
+                  success: false
+                })
               })
             }else if(method == 'ExtrinsicSuccess'){
               if (conn == null) {
@@ -478,7 +484,6 @@ signleRentVir.post('/createSignleVirOrder', urlEcode, async (request, response ,
                   message: err.message
                 }
               }
-              console.log(newsession, 'newsession');
               if (newsession.errcode != undefined || newsession.errcode != null) {
                 newsession = newsession
               } else {
@@ -493,8 +498,12 @@ signleRentVir.post('/createSignleVirOrder', urlEcode, async (request, response ,
                 }
               }
               if (newsession&&newsession.errcode == 0) {
+                if (conn == null) {
+                  conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+                }
+                const virtualInfo3 = await conn.db("identifier").collection("virOrderInfo")
                 let { nonce: nonce1, signature: sign1 } = await CreateSignature1(walletinfo.seed, newsession.message.session_id)
-                await virtualInfo2.updateOne({_id: virOrderId}, {$set: {
+                await virtualInfo3.updateOne({_id: virOrderId}, {$set: {
                   session_id: nonce1,
                   session_id_sign: sign1
                 }})
@@ -504,6 +513,10 @@ signleRentVir.post('/createSignleVirOrder', urlEcode, async (request, response ,
                   msg: '创建待确认租用订单成功,创建session成功',
                   content: virOrderId
                 })
+                if (conn != null){
+                  conn.close()
+                  conn = null
+                }
               } else {
                 response.json({
                   success: true,
@@ -519,6 +532,12 @@ signleRentVir.post('/createSignleVirOrder', urlEcode, async (request, response ,
             }
           });
         }
+      }).catch((err) => {
+        response.json({
+          code: -8,
+          msg:err.message,
+          success: false
+        })
       })
     } else {
       response.json({
@@ -590,7 +609,6 @@ signleRentVir.post('/createSignleVir', urlEcode, async (request, response ,next)
             message: err.message
           }
         }
-        console.log(newsession, 'newsession');
         if (newsession.errcode != undefined || newsession.errcode != null) {
           newsession = newsession
         } else {
@@ -605,11 +623,19 @@ signleRentVir.post('/createSignleVir', urlEcode, async (request, response ,next)
           }
         }
         if (newsession&&newsession.errcode == 0) {
+          if (conn == null) {
+            conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+          }
+          const orderInfo1 = await conn.db("identifier").collection("virOrderInfo")
           let { nonce: nonce1, signature: sign1 } = await CreateSignature1(walletinfo.seed, newsession.message.session_id)
-          await orderInfo.updateOne({_id: virOrderId}, {$set: {
+          await orderInfo1.updateOne({_id: virOrderId}, {$set: {
             session_id: nonce1,
             session_id_sign: sign1
           }})
+          if (conn != null){
+            conn.close()
+            conn = null
+          }
         }
         let { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
         requestData = {
@@ -667,7 +693,11 @@ signleRentVir.post('/createSignleVir', urlEcode, async (request, response ,next)
         }
       }
       if (VirInfo&&VirInfo.message.task_id&&VirInfo.errcode == 0) {
-        await orderInfo.updateOne({_id: virOrderId}, {$set : {
+        if (conn == null) {
+          conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+        }
+        const orderInfo1 = await conn.db("identifier").collection("virOrderInfo")
+        await orderInfo1.updateOne({_id: virOrderId}, {$set : {
           task_id: VirInfo.message.task_id,
           images: ordercon.image_name,
           use_sshOrrdp: ordercon.ssh_port ? ordercon.ssh_port : ordercon.rdp_port,
@@ -681,18 +711,26 @@ signleRentVir.post('/createSignleVir', urlEcode, async (request, response ,next)
           success: true,
           content: virOrderId
         })
+        if (conn != null){
+          conn.close()
+          conn = null
+        }
       } else {
+        if (conn == null) {
+          conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+        }
+        const orderInfo2 = await conn.db("identifier").collection("virOrderInfo")
         if (VirInfo.message == 'ssh_port is occupied' || VirInfo.message.indexOf('port conflict, exist ssh_port') != -1 || VirInfo.message.indexOf('port conflict, exist rdp_port') != -1) {
-          await orderInfo.insertOne({
+          await orderInfo2.insertOne({
             _id: randomWord7(),
             machine_id: machine_id,
             use_sshOrrdp: ordercon.ssh_port ? ordercon.ssh_port : ordercon.rdp_port,
             message: VirInfo.message
           })
           if (ordercon.bios_mode == 'uefi') {
-            await orderInfo.updateOne({_id: virOrderId}, {$set : { rdp_port: Number(ordercon.rdp_port)+1 }})
+            await orderInfo2.updateOne({_id: virOrderId}, {$set : { rdp_port: Number(ordercon.rdp_port)+1 }})
           } else {
-            await orderInfo.updateOne({_id: virOrderId}, {$set : { ssh_port: Number(ordercon.ssh_port)+1 }})
+            await orderInfo2.updateOne({_id: virOrderId}, {$set : { ssh_port: Number(ordercon.ssh_port)+1 }})
           }
           response.json({
             code: -6,
@@ -700,7 +738,7 @@ signleRentVir.post('/createSignleVir', urlEcode, async (request, response ,next)
             success: false
           })
         } else if (VirInfo.message == 'vnc_port is occupied' || VirInfo.message.indexOf('port conflict, exist vnc_port') != -1) {
-          await orderInfo.updateOne({_id: virOrderId}, {$set : { vnc_port: Number(ordercon.vnc_port)+1 }})
+          await orderInfo2.updateOne({_id: virOrderId}, {$set : { vnc_port: Number(ordercon.vnc_port)+1 }})
           response.json({
             code: -5,
             msg: 'VNC端口重复，请重新创建',
@@ -712,6 +750,10 @@ signleRentVir.post('/createSignleVir', urlEcode, async (request, response ,next)
             msg: VirInfo.message,
             success: false
           })
+        }
+        if (conn != null){
+          conn.close()
+          conn = null
         }
       }
     }else{
@@ -745,7 +787,9 @@ signleRentVir.post('/createSignleVir', urlEcode, async (request, response ,next)
   let conn = null;
   try {
     const { virOrderId, status } = request.body
-    conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+    if (conn == null) {
+      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+    }
     if(virOrderId&&status) {
       // 查询虚拟机订单信息
       const VirOrder = await conn.db("identifier").collection("virOrderInfo")
@@ -840,7 +884,6 @@ signleRentVir.post('/timedQuerySignleTask', urlEcode, async (request, response ,
             message: err.message
           }
         }
-        console.log(newsession, 'newsession');
         if (newsession.errcode != undefined || newsession.errcode != null) {
           newsession = newsession
         } else {
@@ -855,11 +898,19 @@ signleRentVir.post('/timedQuerySignleTask', urlEcode, async (request, response ,
           }
         }
         if (newsession&&newsession.errcode == 0) {
+          if (conn == null) {
+            conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+          }
+          const orderInfo1 = await conn.db("identifier").collection("virOrderInfo")
           let { nonce: nonce1, signature: sign1 } = await CreateSignature1(walletinfo.seed, newsession.message.session_id)
-          await orderInfo.updateOne({_id: virOrderId}, {$set: {
+          await orderInfo1.updateOne({_id: virOrderId}, {$set: {
             session_id: nonce1,
             session_id_sign: sign1
           }})
+          if (conn != null){
+            conn.close()
+            conn = null
+          }
         }
         let { nonce: nonce3, signature: sign3 } = await CreateSignature(walletinfo.seed)
         requestData = {
@@ -901,11 +952,15 @@ signleRentVir.post('/timedQuerySignleTask', urlEcode, async (request, response ,
         }
       }
       if (VirInfo && VirInfo.errcode == 0) {
+        if (conn == null) {
+          conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+        }
+        const orderInfo1 = await conn.db("identifier").collection("virOrderInfo")
         const searchMac = conn.db("identifier").collection("MachineDetailsInfo")
         const orderMac = await searchMac.find({ _id: machine_id}).project({ _id: 0}).toArray()
         const MacInfo = orderMac.length ? orderMac[0] : {}
-        await orderInfo.updateOne({_id: virOrderId}, {$set : VirInfo.message})
-        let resultArr = await orderInfo.find({ _id: virOrderId }).toArray()
+        await orderInfo1.updateOne({_id: virOrderId}, {$set : VirInfo.message})
+        let resultArr = await orderInfo1.find({ _id: virOrderId }).toArray()
         response.json({
           code: 10001,
           msg: '获取成功',
@@ -915,19 +970,10 @@ signleRentVir.post('/timedQuerySignleTask', urlEcode, async (request, response ,
             ...MacInfo
           }
         })
-        // await search.updateOne({ _id: task_id }, { $set: VirInfo.message })
-        // let resultArr = await search.find({ _id: task_id }).toArray()
-        // const orderMac = await searchMac.find({ _id: machine_id }).project({ _id: 0, session_id: 0, session_id_sign: 0 }).toArray()
-        // const orderInfo = orderMac.length ? orderMac[0] : {}
-        // response.json({
-        //   code: 10001,
-        //   msg:'获取成功',
-        //   success: true,
-        //   content: {
-        //     ...orderInfo,
-        //     ...resultArr[0]
-        //   }
-        // })
+        if (conn != null){
+          conn.close()
+          conn = null
+        }
       } else {
         response.json({
           code: -2,
@@ -1015,6 +1061,15 @@ signleRentVir.post('/confirmRent', urlEcode, async (request, response ,next) => 
       const orderInfo = await conn.db("identifier").collection("virOrderInfo")
       const virOrderArr = await orderInfo.find({_id: virOrderId}).toArray()
       const virOrderInfo = virOrderArr[0]
+      if (virOrderInfo.confirmRent) {
+        response.json({
+          success: true,
+          code: 10001,
+          msg: '租用成功，订单转为正在使用中',
+          content: virOrderId
+        })
+        return true
+      }
       const wallet = conn.db("identifier").collection("SignleTemporaryWallet")
       const walletArr = await wallet.find({_id: virOrderInfo.machine_id + virOrderInfo.account}).toArray()
       const walletinfo = walletArr[0]
@@ -1057,6 +1112,12 @@ signleRentVir.post('/confirmRent', urlEcode, async (request, response ,next) => 
             }
           });
         }
+      }).catch((err) => {
+        response.json({
+          code: -8,
+          msg:err.message,
+          success: false
+        })
       })
     } else {
       response.json({
@@ -1138,6 +1199,12 @@ signleRentVir.post('/renewRentSignle', urlEcode, async (request, response ,next)
                     }
                   });
                 }
+              }).catch((err) => {
+                response.json({
+                  code: -8,
+                  msg:err.message,
+                  success: false
+                })
               })
             }else if(method == 'ExtrinsicSuccess'){
               if (conn == null) {
@@ -1158,6 +1225,12 @@ signleRentVir.post('/renewRentSignle', urlEcode, async (request, response ,next)
             }
           });
         }
+      }).catch((err) => {
+        response.json({
+          code: -8,
+          msg:err.message,
+          success: false
+        })
       })
     } else {
       response.json({
@@ -1213,11 +1286,11 @@ signleRentVir.post('/rentagain', urlEcode, async (request, response ,next) => {
               .signAndSend( accountFromKeyring , ( { events = [], status , dispatchError  } ) => {
                 if (status.isInBlock) {
                   events.forEach( async ({ event: { method, data: [error] } }) => {
-                    if (conn == null) {
-                      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
-                    }
-                    const virtualInfo1 = await conn.db("identifier").collection("virOrderInfo")
                     if (error.isModule && method == 'ExtrinsicFailed') {
+                      if (conn == null) {
+                        conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+                      }
+                      const virtualInfo1 = await conn.db("identifier").collection("virOrderInfo")
                       await virtualInfo1.updateOne({ _id: virOrderId }, {$set: { errRefund: true }})
                       response.json({
                         success: false,
@@ -1243,6 +1316,12 @@ signleRentVir.post('/rentagain', urlEcode, async (request, response ,next) => {
                     }
                   });
                 }
+              }).catch((err) => {
+                response.json({
+                  code: -8,
+                  msg:err.message,
+                  success: false
+                })
               })
             }else if(method == 'ExtrinsicSuccess'){
               if (conn == null) {
@@ -1293,8 +1372,12 @@ signleRentVir.post('/rentagain', urlEcode, async (request, response ,next) => {
                 }
               }
               if (newsession&&newsession.errcode == 0) {
+                if (conn == null) {
+                  conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+                }
+                const virtualInfo3 = await conn.db("identifier").collection("virOrderInfo")
                 let { nonce: nonce1, signature: sign1 } = await CreateSignature1(walletinfo.seed, newsession.message.session_id)
-                await virtualInfo2.updateOne({_id: virOrderId}, {$set: {
+                await virtualInfo3.updateOne({_id: virOrderId}, {$set: {
                   session_id: nonce1,
                   session_id_sign: sign1
                 }})
@@ -1304,6 +1387,10 @@ signleRentVir.post('/rentagain', urlEcode, async (request, response ,next) => {
                   msg: '创建待确认租用订单成功,创建session成功',
                   content: virOrderId
                 })
+                if (conn != null){
+                  conn.close()
+                  conn = null
+                }
               } else {
                 response.json({
                   success: true,
@@ -1319,6 +1406,12 @@ signleRentVir.post('/rentagain', urlEcode, async (request, response ,next) => {
             }
           });
         }
+      }).catch((err) => {
+        response.json({
+          code: -8,
+          msg:err.message,
+          success: false
+        })
       })
     } else {
       response.json({
@@ -1354,7 +1447,9 @@ signleRentVir.post('/createNetwork', urlEcode, async (request, response ,next) =
   try {
     const { id } = request.body
     if(id) {
-      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      if (conn == null) {
+        conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      }
       const virtualInfo = conn.db("identifier").collection("virtualInfo")
       let orderArr = await virtualInfo.find({_id: id}).toArray()
       let orderinfo = orderArr[0]
@@ -1389,7 +1484,6 @@ signleRentVir.post('/createNetwork', urlEcode, async (request, response ,next) =
             message: err.message
           }
         }
-        console.log(VirInfo, 'VirInfo');
         if (VirInfo.errcode != undefined || VirInfo.errcode != null) {
           VirInfo = VirInfo
         } else {
@@ -1404,13 +1498,21 @@ signleRentVir.post('/createNetwork', urlEcode, async (request, response ,next) =
           }
         }
         if (VirInfo&&VirInfo.errcode == 0) {
-          await virtualInfo.updateOne({_id: id},{$set:{network_name: network_name}})
+          if (conn == null) {
+            conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+          }
+          const virtualInfo1 = conn.db("identifier").collection("virtualInfo")
+          await virtualInfo1.updateOne({_id: id},{$set:{network_name: network_name}})
           response.json({
             code: 10001,
             msg: '获取网络名称成功',
             success: true,
             content: network_name
           })
+          if (conn != null){
+            conn.close()
+            conn = null
+          }
         } else {
           response.json({
             code: -2,
@@ -1485,7 +1587,6 @@ signleRentVir.post('/restartSignleVir', urlEcode, async (request, response ,next
             message: err.message
           }
         }
-        console.log(newsession, 'newsession');
         if (newsession.errcode != undefined || newsession.errcode != null) {
           newsession = newsession
         } else {
@@ -1500,11 +1601,19 @@ signleRentVir.post('/restartSignleVir', urlEcode, async (request, response ,next
           }
         }
         if (newsession&&newsession.errcode == 0) {
+          if (conn == null) {
+            conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+          }
+          const orderInfo1 = await conn.db("identifier").collection("virOrderInfo")
           let { nonce: nonce1, signature: sign1 } = await CreateSignature1(walletinfo.seed, newsession.message.session_id)
-          await orderInfo.updateOne({_id: virOrderId}, {$set: {
+          await orderInfo1.updateOne({_id: virOrderId}, {$set: {
             session_id: nonce1,
             session_id_sign: sign1
           }})
+          if (conn != null){
+            conn.close()
+            conn = null
+          }
         }
         let { nonce: nonce3, signature: sign3 } = await CreateSignature(walletinfo.seed)
         requestData = {
@@ -1552,19 +1661,6 @@ signleRentVir.post('/restartSignleVir', urlEcode, async (request, response ,next
           success: true,
           content: virOrderId
         })
-        // await search.updateOne({ _id: task_id }, { $set: VirInfo.message })
-        // let resultArr = await search.find({ _id: task_id }).toArray()
-        // const orderMac = await searchMac.find({ _id: machine_id }).project({ _id: 0, session_id: 0, session_id_sign: 0 }).toArray()
-        // const orderInfo = orderMac.length ? orderMac[0] : {}
-        // response.json({
-        //   code: 10001,
-        //   msg:'获取成功',
-        //   success: true,
-        //   content: {
-        //     ...orderInfo,
-        //     ...resultArr[0]
-        //   }
-        // })
       } else {
         response.json({
           code: -2,
@@ -1653,11 +1749,19 @@ signleRentVir.post('/stopSignleVir', urlEcode, async (request, response ,next) =
           }
         }
         if (newsession&&newsession.errcode == 0) {
+          if (conn == null) {
+            conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+          }
+          const orderInfo1 = await conn.db("identifier").collection("virOrderInfo")
           let { nonce: nonce1, signature: sign1 } = await CreateSignature1(walletinfo.seed, newsession.message.session_id)
-          await orderInfo.updateOne({_id: virOrderId}, {$set: {
+          await orderInfo1.updateOne({_id: virOrderId}, {$set: {
             session_id: nonce1,
             session_id_sign: sign1
           }})
+          if (conn != null){
+            conn.close()
+            conn = null
+          }
         }
         let { nonce: nonce3, signature: sign3 } = await CreateSignature(walletinfo.seed)
         requestData = {
@@ -1705,19 +1809,6 @@ signleRentVir.post('/stopSignleVir', urlEcode, async (request, response ,next) =
           success: true,
           content: virOrderId
         })
-        // await search.updateOne({ _id: task_id }, { $set: VirInfo.message })
-        // let resultArr = await search.find({ _id: task_id }).toArray()
-        // const orderMac = await searchMac.find({ _id: machine_id }).project({ _id: 0, session_id: 0, session_id_sign: 0 }).toArray()
-        // const orderInfo = orderMac.length ? orderMac[0] : {}
-        // response.json({
-        //   code: 10001,
-        //   msg:'获取成功',
-        //   success: true,
-        //   content: {
-        //     ...orderInfo,
-        //     ...resultArr[0]
-        //   }
-        // })
       } else {
         response.json({
           code: -2,
@@ -1806,11 +1897,19 @@ signleRentVir.post('/startSignleVir', urlEcode, async (request, response ,next) 
           }
         }
         if (newsession&&newsession.errcode == 0) {
+          if (conn == null) {
+            conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+          }
+          const orderInfo1 = await conn.db("identifier").collection("virOrderInfo")
           let { nonce: nonce1, signature: sign1 } = await CreateSignature1(walletinfo.seed, newsession.message.session_id)
-          await orderInfo.updateOne({_id: virOrderId}, {$set: {
+          await orderInfo1.updateOne({_id: virOrderId}, {$set: {
             session_id: nonce1,
             session_id_sign: sign1
           }})
+          if (conn != null){
+            conn.close()
+            conn = null
+          }
         }
         let { nonce: nonce3, signature: sign3 } = await CreateSignature(walletinfo.seed)
         requestData = {
@@ -1852,8 +1951,12 @@ signleRentVir.post('/startSignleVir', urlEcode, async (request, response ,next) 
         }
       }
       if (VirInfo1 && VirInfo1.errcode == 0) {
+        if (conn == null) {
+          conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+        }
+        const orderInfo2 = await conn.db("identifier").collection("virOrderInfo")
         if (VirInfo1.message.status == 'running') {
-          await orderInfo.updateOne({_id: virOrderId}, {$set: { status: 'running' }})
+          await orderInfo2.updateOne({_id: virOrderId}, {$set: { status: 'running' }})
           response.json({
             code: 10001,
             msg: '启动成功',
@@ -1861,7 +1964,7 @@ signleRentVir.post('/startSignleVir', urlEcode, async (request, response ,next) 
             content: virOrderId
           })
         } else if (VirInfo1.message.status == 'starting') {
-          await orderInfo.updateOne({_id: virOrderId}, {$set: { status: 'starting' }})
+          await orderInfo2.updateOne({_id: virOrderId}, {$set: { status: 'starting' }})
           response.json({
             code: 10001,
             msg: '启动成功',
@@ -1923,6 +2026,10 @@ signleRentVir.post('/startSignleVir', urlEcode, async (request, response ,next) 
             })
           }
         }
+        if (conn != null){
+          conn.close()
+          conn = null
+        }
       } else {
         response.json({
           code: -2,
@@ -1970,7 +2077,9 @@ signleRentVir.post('/editVir', urlEcode, async (request, response ,next) => {
       new_mem_size,
       increase_disk_size} = request.body
     if(id&&task_id) {
-      conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      if (conn == null) {
+        conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+      }
       const virtualInfo = conn.db("identifier").collection("virtualInfo")
       let orderArr = await virtualInfo.find({_id: id}).toArray()
       let orderinfo = orderArr[0]
@@ -2019,6 +2128,9 @@ signleRentVir.post('/editVir', urlEcode, async (request, response ,next) => {
         }
       }
       if (taskinfo&&taskinfo.errcode == 0) {
+        if (conn == null) {
+          conn = await MongoClient.connect(url, { useUnifiedTopology: true })
+        }
         const task = conn.db("identifier").collection("virtualTask")
         await task.updateOne({_id: task_id}, {$set:{
           port_min: port_min,
@@ -2030,6 +2142,10 @@ signleRentVir.post('/editVir', urlEcode, async (request, response ,next) => {
           msg: '修改成功',
           success: true
         })
+        if (conn != null){
+          conn.close()
+          conn = null
+        }
       }else {
         response.json({
           code: -2,
