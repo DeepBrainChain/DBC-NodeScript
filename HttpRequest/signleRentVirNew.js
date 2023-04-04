@@ -1196,7 +1196,7 @@ signleRentVir.post('/getSignleVirtual', urlEcode, async (request, response ,next
     if(account) {
       const search = conn.db("identifier").collection("virOrderInfo")
       const searchMac = conn.db("identifier").collection("MachineDetailsInfo")
-      let orderArr = await search.find({account: account, orderStatus: {$in:[2, 3, 4, 5, 6]}, searchHidden: {$ne: true}}).sort({"createTime": -1}).toArray()
+      let orderArr = await search.find({account: account, orderStatus: {$in:[2, 3, 4, 5, 6]}, searchHidden: {$ne: true}}).sort({"create_time": -1}).toArray()
       let newArr = []
       if (orderArr.length) {
         for (let i = 0; i < orderArr.length; i++) {
