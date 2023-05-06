@@ -400,7 +400,6 @@ signleRentVir.post('/createSignleVirOrder', urlEcode, async (request, response ,
       await api.tx.rentMachine
       .rentMachine( machine_id, gpu_count, Number(time)*120 )
       .signAndSend( accountFromKeyring, async ( { events = [], status , dispatchError  } ) => {
-        console.log('rentMachine-status.isInBlock', status.isInBlock);
         if (status.isInBlock) {
           for (let i = 0; i < events.length; i ++) {
             let { event: { method, data: [error] } } = events[i]
@@ -574,144 +573,6 @@ signleRentVir.post('/createSignleVirOrder', urlEcode, async (request, response ,
               }
             }
           }
-          // events.forEach( async ({ event: { method, data: [error] }}) => {
-          //   console.log('createSignleVirOrder-rentMachine-rentMachine:', method);
-          //   if (error.isModule && method == 'ExtrinsicFailed') {
-          //     const decoded = await api.registry.findMetaError(error.asModule)
-          //     const siPower = new BN(15)
-          //     const bob = inputToBn(String(dbc-11), siPower, 15)
-          //     await cryptoWaitReady();
-          //     await api.tx.balances
-          //     .transfer( account, bob )
-          //     .signAndSend( accountFromKeyring , ( { events = [], status , dispatchError  } ) => {
-          //       if (status.isInBlock) {
-          //         events.forEach( async ({ event: { method, data: [error] } }) => {
-          //           console.log('createSignleVirOrder-rentMachine-rentMachine-transfer:', method);
-          //           if (conn == null) {
-          //             conn = await MongoClient.connect(url, { useUnifiedTopology: true })
-          //           }
-          //           const virtualInfo1 = await conn.db("identifier").collection("virOrderInfo")
-          //           if (error.isModule && method == 'ExtrinsicFailed') {
-          //             await virtualInfo1.updateOne({ _id: virOrderId }, {$set: { orderStatus: 0, errRefund: true }})
-          //             console.log('rentMachine-transfer-ExtrinsicFailed');
-          //             response.json({
-          //               success: false,
-          //               code: -3,
-          //               msg: decoded.method + '创建待确认租用订单失败，退币失败，请联系客服处理',
-          //               content: virOrderId
-          //             })
-          //             if (conn != null) {
-          //               conn.close()
-          //               conn = null
-          //             }
-          //           } else if (method == 'ExtrinsicSuccess'){
-          //             await virtualInfo1.updateOne({ _id: virOrderId }, {$set: { orderStatus: 0 }})
-          //             console.log('rentMachine-transfer-ExtrinsicSuccess');
-          //             response.json({
-          //               success: false,
-          //               code: -2,
-          //               msg: decoded.method + '创建待确认租用订单失败，DBC已退回原账户',
-          //               content: virOrderId
-          //             })
-          //             if (conn != null){
-          //               conn.close()
-          //               conn = null
-          //             }
-          //           }
-          //         });
-          //       }
-          //     }).catch((err) => {
-          //       console.log('rentMachine-transfer-catch');
-          //       response.json({
-          //         code: -8,
-          //         msg:err.message,
-          //         success: false
-          //       })
-          //     })
-          //   } else if(method == 'ExtrinsicSuccess'){
-          //     if (conn == null) {
-          //       conn = await MongoClient.connect(url, { useUnifiedTopology: true })
-          //     }
-          //     const virtualInfo2 = await conn.db("identifier").collection("virOrderInfo")
-          //     // 机器原始信息
-          //     const macdetail = await conn.db("identifier").collection("MachineDetailsInfo")
-          //     const OrderId = await getOrderId(walletinfo.wallet)
-          //     await virtualInfo2.updateOne({_id: virOrderId}, {$set:{orderStatus: 2, OrderId: OrderId, createTime: Date.now()}})
-          //     const macinfoArr = await macdetail.find({_id: machine_id}).toArray()
-          //     // 单个租用后，将机器设置为已被单个租用，并设置剩余可用GPU数量
-          //     await macdetail.updateOne({_id: machine_id}, {$set: {hasSignle: true, CanUseGpu: Number(macinfoArr[0].CanUseGpu) - Number(gpu_count)}})
-          //     // 创建虚拟机所需要的session
-          //     let { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
-          //     let newsession = {}
-          //     try {
-          //       newsession = await httpRequest({
-          //         url: baseUrl + "/api/v1/mining_nodes/session_id",
-          //         method: "post",
-          //         json: true,
-          //         headers: {},
-          //         body: {
-          //           "peer_nodes_list": [machine_id], 
-          //           "additional": { },
-          //           "nonce": nonce1,
-          //           "sign": sign1,
-          //           "wallet": walletinfo.wallet,
-          //           "rent_order": String(OrderId)
-          //         }
-          //       })
-          //     } catch (err) {
-          //       newsession = {
-          //         message: err.message
-          //       }
-          //     }
-          //     if (newsession.errcode != undefined || newsession.errcode != null) {
-          //       newsession = newsession
-          //     } else {
-          //       if (newsession.netcongtu || newsession.mainnet) {
-          //         if (machine_id.indexOf('CTC') != -1) {
-          //           newsession = newsession.netcongtu
-          //         } else {
-          //           newsession = newsession.mainnet
-          //         }
-          //       } else {
-          //         newsession = newsession
-          //       }
-          //     }
-          //     if (newsession&&newsession.errcode == 0) {
-          //       if (conn == null) {
-          //         conn = await MongoClient.connect(url, { useUnifiedTopology: true })
-          //       }
-          //       const virtualInfo3 = await conn.db("identifier").collection("virOrderInfo")
-          //       let { nonce: nonce1, signature: sign1 } = await CreateSignature1(walletinfo.seed, newsession.message.session_id)
-          //       await virtualInfo3.updateOne({_id: virOrderId}, {$set: {
-          //         session_id: nonce1,
-          //         session_id_sign: sign1
-          //       }})
-          //       console.log('rentMachine-rentMachine-ExtrinsicSuccess-sessionsuccess');
-          //       response.json({
-          //         success: true,
-          //         code: 10001,
-          //         msg: '创建待确认租用订单成功,创建session成功',
-          //         content: virOrderId
-          //       })
-          //       if (conn != null){
-          //         conn.close()
-          //         conn = null
-          //       }
-          //     } else {
-          //       console.log('rentMachine-rentMachine-ExtrinsicSuccess-sessionfail');
-          //       response.json({
-          //         success: true,
-          //         code: 10001,
-          //         msg: '创建待确认租用订单成功,创建session失败',
-          //         content: virOrderId
-          //       })
-          //     }
-          //     if (conn != null){
-          //       conn.close()
-          //       conn = null
-          //     }
-          //   }
-          // });
         }
       }).catch((err) => {
         console.log('rentMachine-rentMachine-catch');
@@ -754,6 +615,7 @@ signleRentVir.post('/createSignleVir', urlEcode, async (request, response ,next)
       account
     } = request.body
     if (machine_id) {
+      console.log(`创建虚拟机-createSignleVir-start: orderId-' ${virOrderId}`);
       if (conn == null) {
         conn = await MongoClient.connect(url, { useUnifiedTopology: true })
       }
@@ -830,6 +692,7 @@ signleRentVir.post('/createSignleVir', urlEcode, async (request, response ,next)
       }
       let VirInfo = {}
       try {
+        console.log(`执行创建虚拟机命令-tasks/start: orderId-' ${virOrderId}`);
         VirInfo = await httpRequest({
           url: baseUrl + "/api/v1/tasks/start",
           method: "post",
@@ -889,6 +752,7 @@ signleRentVir.post('/createSignleVir', urlEcode, async (request, response ,next)
           use_vnc: ordercon.vnc_port,
           ...VirInfo.message
         }})
+        console.log(`执行创建虚拟机命令成功： orderId-' ${virOrderId}`);
         response.json({
           code: 10001,
           msg: '创建中',
@@ -1257,14 +1121,13 @@ signleRentVir.post('/confirmRent', urlEcode, async (request, response, next) => 
       const wallet = conn.db("identifier").collection("SignleTemporaryWallet")
       const walletArr = await wallet.find({_id: virOrderInfo.machine_id + virOrderInfo.account}).toArray()
       const walletinfo = walletArr[0]
-      console.log('confirmRent-start');
+      console.log(`confirmRent-start： orderId-' ${virOrderId}`);
       await GetApi()
       const accountFromKeyring = keyring.addFromUri(walletinfo.seed);
       await cryptoWaitReady();
       await api.tx.rentMachine
       .confirmRent( virOrderInfo.OrderId )
       .signAndSend( accountFromKeyring, async ( { events = [], status , dispatchError  } ) => {
-        console.log('confirmRent-status.isInBlock', status.isInBlock);
         if (status.isInBlock) {
           for (let i = 0; i < events.length; i ++) {
             let { event: { method, data: [error] } } = events[i]
@@ -1298,38 +1161,6 @@ signleRentVir.post('/confirmRent', urlEcode, async (request, response, next) => 
               })
             }
           }
-          // events.forEach( async ({ event: { method, data: [error] }}) => {
-          //   console.log('confirmRent-rentMachine-confirmRent:', method);
-          //   if (error.isModule && method == 'ExtrinsicFailed') {
-          //     const decoded = await api.registry.findMetaError(error.asModule)
-          //     response.json({
-          //       success: false,
-          //       code: -2,
-          //       msg: decoded.method + '-->租用失败，请重试',
-          //       content: virOrderId
-          //     })
-          //     if (conn != null){
-          //       conn.close()
-          //       conn = null
-          //     }
-          //   } else if (method == 'ExtrinsicSuccess') {
-          //     if (conn == null) {
-          //       conn = await MongoClient.connect(url, { useUnifiedTopology: true })
-          //     }
-          //     const virtualInfo1 = await conn.db("identifier").collection("virOrderInfo")
-          //     await virtualInfo1.updateOne({_id: virOrderId}, {$set:{ confirmRent: true }})
-          //     response.json({
-          //       success: true,
-          //       code: 10002,
-          //       msg: '租用成功，订单转为正在使用中',
-          //       content: virOrderId
-          //     })
-          //     if (conn != null) {
-          //       conn.close()
-          //       conn = null
-          //     }
-          //   }
-          // });
         }
       }).catch((err) => {
         return response.json({
@@ -1339,7 +1170,7 @@ signleRentVir.post('/confirmRent', urlEcode, async (request, response, next) => 
         })
       })
     } else {
-      console.log('rentMachine-transfer-ExtrinsicFailed');
+      console.log(`rentMachine-transfer-ExtrinsicFailed： orderId- ${virOrderId}`);
       if (conn != null) {
         conn.close()
         conn = null
@@ -1351,7 +1182,7 @@ signleRentVir.post('/confirmRent', urlEcode, async (request, response, next) => 
       })
     }
   } catch (error) {
-    console.log('rentMachine-transfer-ExtrinsicFailed');
+    console.log(`rentMachine-transfer-ExtrinsicFailed`);
     if (conn != null) {
       conn.close()
       conn = null
@@ -1377,14 +1208,13 @@ signleRentVir.post('/renewRentSignle', urlEcode, async (request, response ,next)
       const walletinfo = walletArr[0]
       const orderArr = await search.find({_id: virOrderId}).toArray()
       const orderinfo = orderArr[0]
-      console.log('renewRentSignle-start');
+      console.log(`renewRentSignle-start: OrderId: ${virOrderId}`);
       await GetApi()
       let accountFromKeyring = keyring.addFromUri(walletinfo.seed);
       await cryptoWaitReady();
       await api.tx.rentMachine
       .reletMachine( rent_order, Number(add_hour)*120 )
       .signAndSend( accountFromKeyring, async ( { events = [], status , dispatchError  } ) => {
-        console.log('reletMachine-status.isInBlock', status.isInBlock);
         if (status.isInBlock) {
           for (let i = 0; i < events.length; i ++) {
             let { event: { method, data: [error] } } = events[i]
@@ -1399,9 +1229,8 @@ signleRentVir.post('/renewRentSignle', urlEcode, async (request, response ,next)
                 if (status.isInBlock) {
                   for (let k = 0; k < events.length; k ++) {
                     let { event: { method, data: [error] } } = events[k]
-                    console.log('renewRentSignle-rentMachine-reletMachine-transfer:', method);
                     if (error.isModule && method == 'ExtrinsicFailed') {
-                      console.log('reletMachine-transfer-ExtrinsicFailed');
+                      console.log(`reletMachine-transfer-ExtrinsicFailed: OrderId: ${virOrderId}`);
                       if (conn != null){
                         conn.close()
                         conn = null
@@ -1413,7 +1242,7 @@ signleRentVir.post('/renewRentSignle', urlEcode, async (request, response ,next)
                         content: id
                       })
                     } else if (method == 'ExtrinsicSuccess') {
-                      console.log('reletMachine-transfer-ExtrinsicSuccess');
+                      console.log(`reletMachine-transfer-ExtrinsicSuccess: OrderId: ${virOrderId}`);
                       if (conn != null){
                         conn.close()
                         conn = null
@@ -1426,37 +1255,9 @@ signleRentVir.post('/renewRentSignle', urlEcode, async (request, response ,next)
                       })
                     }
                   }
-                  // events.forEach( async ({ event: { method, data: [error] } }) => {
-                  //   console.log('renewRentSignle-rentMachine-reletMachine-transfer:', method);
-                  //   if (error.isModule && method == 'ExtrinsicFailed') {
-                  //     console.log('reletMachine-transfer-ExtrinsicFailed');
-                  //     response.json({
-                  //       success: false,
-                  //       code: -3,
-                  //       msg: decoded.method + '-->续费失败,DBC退币失败，请联系客服处理',
-                  //       content: id
-                  //     })
-                  //     if (conn != null){
-                  //       conn.close()
-                  //       conn = null
-                  //     }
-                  //   }else if (method == 'ExtrinsicSuccess') {
-                  //     console.log('reletMachine-transfer-ExtrinsicSuccess');
-                  //     response.json({
-                  //       success: false,
-                  //       code: -2,
-                  //       msg: decoded.method + '-->续费失败，DBC已退回原账户',
-                  //       content: id
-                  //     })
-                  //     if (conn != null){
-                  //       conn.close()
-                  //       conn = null
-                  //     }
-                  //   }
-                  // });
                 }
               }).catch((err) => {
-                console.log('reletMachine-transfer-catch');
+                console.log(`reletMachine-transfer-catch: OrderId: ${virOrderId}`);
                 response.json({
                   code: -8,
                   msg:err.message,
@@ -1469,7 +1270,7 @@ signleRentVir.post('/renewRentSignle', urlEcode, async (request, response ,next)
               }
               const virtualInfo1 = await conn.db("identifier").collection("virOrderInfo")
               await virtualInfo1.updateOne({_id: virOrderId}, {$set:{ dbc: (Number(orderinfo.dbc) + Number(dbc)), time: (Number(orderinfo.time) + Number(add_hour))}})
-              console.log('rentMachine-reletMachine-ExtrinsicSuccess');
+              console.log(`rentMachine-reletMachine-ExtrinsicSuccess: OrderId: ${virOrderId}`);
               if (conn != null){
                 conn.close()
                 conn = null
@@ -1482,76 +1283,9 @@ signleRentVir.post('/renewRentSignle', urlEcode, async (request, response ,next)
               })
             }
           }
-          // events.forEach( async ({ event: { method, data: [error] }}) => {
-          //   console.log('renewRentSignle-rentMachine-reletMachine:', method);
-          //   if (error.isModule && method == 'ExtrinsicFailed') {
-          //     const decoded = await api.registry.findMetaError(error.asModule)
-          //     const siPower = new BN(15)
-          //     const bob = inputToBn(String(dbc), siPower, 15)
-          //     await cryptoWaitReady();
-          //     await api.tx.balances
-          //     .transfer( account, bob )
-          //     .signAndSend( accountFromKeyring , ( { events = [], status , dispatchError  } ) => {
-          //       if (status.isInBlock) {
-          //         events.forEach( async ({ event: { method, data: [error] } }) => {
-          //           console.log('renewRentSignle-rentMachine-reletMachine-transfer:', method);
-          //           if (error.isModule && method == 'ExtrinsicFailed') {
-          //             console.log('reletMachine-transfer-ExtrinsicFailed');
-          //             response.json({
-          //               success: false,
-          //               code: -3,
-          //               msg: decoded.method + '-->续费失败,DBC退币失败，请联系客服处理',
-          //               content: id
-          //             })
-          //             if (conn != null){
-          //               conn.close()
-          //               conn = null
-          //             }
-          //           }else if (method == 'ExtrinsicSuccess') {
-          //             console.log('reletMachine-transfer-ExtrinsicSuccess');
-          //             response.json({
-          //               success: false,
-          //               code: -2,
-          //               msg: decoded.method + '-->续费失败，DBC已退回原账户',
-          //               content: id
-          //             })
-          //             if (conn != null){
-          //               conn.close()
-          //               conn = null
-          //             }
-          //           }
-          //         });
-          //       }
-          //     }).catch((err) => {
-          //       console.log('reletMachine-transfer-catch');
-          //       response.json({
-          //         code: -8,
-          //         msg:err.message,
-          //         success: false
-          //       })
-          //     })
-          //   }else if(method == 'ExtrinsicSuccess'){
-          //     if (conn == null) {
-          //       conn = await MongoClient.connect(url, { useUnifiedTopology: true })
-          //     }
-          //     const virtualInfo1 = await conn.db("identifier").collection("virOrderInfo")
-          //     await virtualInfo1.updateOne({_id: virOrderId}, {$set:{ dbc: (Number(orderinfo.dbc) + Number(dbc)), time: (Number(orderinfo.time) + Number(add_hour))}})
-          //     console.log('rentMachine-reletMachine-ExtrinsicSuccess');
-          //     response.json({
-          //       success: true,
-          //       code: 10001,
-          //       msg: '续费成功',
-          //       content: virOrderId
-          //     })
-          //     if (conn != null){
-          //       conn.close()
-          //       conn = null
-          //     }
-          //   }
-          // });
         }
       }).catch((err) => {
-        console.log('rentMachine-reletMachine-catch');
+        console.log(`rentMachine-reletMachine-catch: OrderId: ${virOrderId}`);
         return response.json({
           code: -8,
           msg:err.message,
@@ -1595,7 +1329,7 @@ signleRentVir.post('/rentagain', urlEcode, async (request, response ,next) => {
       const getwallet = conn.db("identifier").collection("SignleTemporaryWallet")
       const walletArr = await getwallet.find({_id: machine_id+account}).toArray()
       const walletinfo = walletArr[0]
-      console.log('rentagain-start');
+      console.log(`rentagain-start: OrderId: ${virOrderId}`);
       // 租用机器
       await GetApi()
       let accountFromKeyring = keyring.addFromUri(walletinfo.seed);
@@ -1603,11 +1337,9 @@ signleRentVir.post('/rentagain', urlEcode, async (request, response ,next) => {
       await api.tx.rentMachine
       .rentMachine( machine_id, gpu_count, Number(add_hour)*120 )
       .signAndSend( accountFromKeyring, async ( { events = [], status , dispatchError  } ) => {
-        console.log('rentagain-rentMachine-status.isInBlock', status.isInBlock);
         if (status.isInBlock) {
           for (let i = 0; i < events.length; i ++) {
             let { event: { method, data: [error] } } = events[i]
-            console.log('rentagain-rentMachine-rentMachine-transfer:', method);
             if (error.isModule && method == 'ExtrinsicFailed') {
               const decoded = await api.registry.findMetaError(error.asModule)
               const siPower = new BN(15)
@@ -1619,14 +1351,13 @@ signleRentVir.post('/rentagain', urlEcode, async (request, response ,next) => {
                 if (status.isInBlock) {
                   for (let k = 0; k < events.length; k ++) {
                     let { event: { method, data: [error] } } = events[k]
-                    console.log('rentagain-rentMachine-rentMachine-transfer:', method);
                     if (error.isModule && method == 'ExtrinsicFailed') {
                       if (conn == null) {
                         conn = await MongoClient.connect(url, { useUnifiedTopology: true })
                       }
                       const virtualInfo1 = await conn.db("identifier").collection("virOrderInfo")
                       await virtualInfo1.updateOne({ _id: virOrderId }, {$set: { errRefund: true }})
-                      console.log('rentagain-rentMachine-transfer-ExtrinsicFailed');
+                      console.log(`rentagain-rentMachine-transfer-ExtrinsicFailed: OrderId: ${virOrderId}`);
                       if (conn != null) {
                         conn.close()
                         conn = null
@@ -1638,7 +1369,7 @@ signleRentVir.post('/rentagain', urlEcode, async (request, response ,next) => {
                         content: virOrderId
                       })
                     } else if (method == 'ExtrinsicSuccess'){
-                      console.log('rentagain-rentMachine-transfer-ExtrinsicSuccess');
+                      console.log(`rentagain-rentMachine-transfer-ExtrinsicSuccess: OrderId: ${virOrderId}`);
                       if (conn != null) {
                         conn.close()
                         conn = null
@@ -1651,42 +1382,9 @@ signleRentVir.post('/rentagain', urlEcode, async (request, response ,next) => {
                       })
                     }
                   }
-                  // events.forEach( async ({ event: { method, data: [error] } }) => {
-                  //   console.log('rentagain-rentMachine-rentMachine-transfer:', method);
-                  //   if (error.isModule && method == 'ExtrinsicFailed') {
-                  //     if (conn == null) {
-                  //       conn = await MongoClient.connect(url, { useUnifiedTopology: true })
-                  //     }
-                  //     const virtualInfo1 = await conn.db("identifier").collection("virOrderInfo")
-                  //     await virtualInfo1.updateOne({ _id: virOrderId }, {$set: { errRefund: true }})
-                  //     console.log('rentagain-rentMachine-transfer-ExtrinsicFailed');
-                  //     response.json({
-                  //       success: false,
-                  //       code: -3,
-                  //       msg: decoded.method + '创建待确认租用订单失败，退币失败，请联系客服处理',
-                  //       content: virOrderId
-                  //     })
-                  //     if (conn != null) {
-                  //       conn.close()
-                  //       conn = null
-                  //     }
-                  //   } else if (method == 'ExtrinsicSuccess'){
-                  //     console.log('rentagain-rentMachine-transfer-ExtrinsicSuccess');
-                  //     response.json({
-                  //       success: false,
-                  //       code: -2,
-                  //       msg: decoded.method + '创建待确认租用订单失败，DBC已退回原账户',
-                  //       content: virOrderId
-                  //     })
-                  //     if (conn != null){
-                  //       conn.close()
-                  //       conn = null
-                  //     }
-                  //   }
-                  // });
                 }
               }).catch((err) => {
-                console.log('rentagain-rentMachine-transfer-catch');
+                console.log(`rentagain-rentMachine-transfer-catch: OrderId: ${virOrderId}`);
                 return response.json({
                   code: -8,
                   msg:err.message,
@@ -1751,7 +1449,7 @@ signleRentVir.post('/rentagain', urlEcode, async (request, response ,next) => {
                   session_id: nonce1,
                   session_id_sign: sign1
                 }})
-                console.log('rentagain-rentMachine-ExtrinsicSuccess-session-true');
+                console.log(`rentagain-rentMachine-ExtrinsicSuccess-session-true: OrderId: ${virOrderId}`);
                 if (conn != null){
                   conn.close()
                   conn = null
@@ -1763,7 +1461,7 @@ signleRentVir.post('/rentagain', urlEcode, async (request, response ,next) => {
                   content: virOrderId
                 })
               } else {
-                console.log('rentagain-rentMachine-ExtrinsicSuccess-session-false');
+                console.log(`rentagain-rentMachine-ExtrinsicSuccess-session-false: OrderId: ${virOrderId}`);
                 if (conn != null){
                   conn.close()
                   conn = null
@@ -1777,146 +1475,9 @@ signleRentVir.post('/rentagain', urlEcode, async (request, response ,next) => {
               }
             }
           }
-          // events.forEach( async ({ event: { method, data: [error] }}) => {
-          //   console.log('rentagain-rentMachine-rentMachine-transfer:', method);
-          //   if (error.isModule && method == 'ExtrinsicFailed') {
-          //     const decoded = await api.registry.findMetaError(error.asModule)
-          //     const siPower = new BN(15)
-          //     const bob = inputToBn(String(dbc-11), siPower, 15)
-          //     await cryptoWaitReady();
-          //     await api.tx.balances
-          //     .transfer( account, bob )
-          //     .signAndSend( accountFromKeyring , ( { events = [], status , dispatchError  } ) => {
-          //       if (status.isInBlock) {
-          //         events.forEach( async ({ event: { method, data: [error] } }) => {
-          //           console.log('rentagain-rentMachine-rentMachine-transfer:', method);
-          //           if (error.isModule && method == 'ExtrinsicFailed') {
-          //             if (conn == null) {
-          //               conn = await MongoClient.connect(url, { useUnifiedTopology: true })
-          //             }
-          //             const virtualInfo1 = await conn.db("identifier").collection("virOrderInfo")
-          //             await virtualInfo1.updateOne({ _id: virOrderId }, {$set: { errRefund: true }})
-          //             console.log('rentagain-rentMachine-transfer-ExtrinsicFailed');
-          //             response.json({
-          //               success: false,
-          //               code: -3,
-          //               msg: decoded.method + '创建待确认租用订单失败，退币失败，请联系客服处理',
-          //               content: virOrderId
-          //             })
-          //             if (conn != null) {
-          //               conn.close()
-          //               conn = null
-          //             }
-          //           } else if (method == 'ExtrinsicSuccess'){
-          //             console.log('rentagain-rentMachine-transfer-ExtrinsicSuccess');
-          //             response.json({
-          //               success: false,
-          //               code: -2,
-          //               msg: decoded.method + '创建待确认租用订单失败，DBC已退回原账户',
-          //               content: virOrderId
-          //             })
-          //             if (conn != null){
-          //               conn.close()
-          //               conn = null
-          //             }
-          //           }
-          //         });
-          //       }
-          //     }).catch((err) => {
-          //       console.log('rentagain-rentMachine-transfer-catch');
-          //       response.json({
-          //         code: -8,
-          //         msg:err.message,
-          //         success: false
-          //       })
-          //     })
-          //   } else if(method == 'ExtrinsicSuccess'){
-          //     if (conn == null) {
-          //       conn = await MongoClient.connect(url, { useUnifiedTopology: true })
-          //     }
-          //     const virtualInfo2 = await conn.db("identifier").collection("virOrderInfo")
-          //     // 机器原始信息
-          //     const macdetail = await conn.db("identifier").collection("MachineDetailsInfo")
-          //     const OrderId = await getOrderId(walletinfo.wallet)
-          //     await virtualInfo2.updateOne({_id: virOrderId}, {$set:{orderStatus: 6, time: add_hour, dbc: dbc, OrderId: OrderId, createTime: Date.now()}})
-          //     const macinfoArr = await macdetail.find({_id: machine_id}).toArray()
-          //     // 单个租用后，将机器设置为已被单个租用，并设置剩余可用GPU数量
-          //     await macdetail.updateOne({_id: machine_id}, {$set: {hasSignle: true, CanUseGpu: Number(macinfoArr[0].CanUseGpu) - Number(gpu_count)}})
-          //     // 创建虚拟机所需要的session
-          //     let { nonce: nonce1, signature: sign1 } = await CreateSignature(walletinfo.seed)
-          //     let newsession = {}
-          //     try {
-          //       newsession = await httpRequest({
-          //         url: baseUrl + "/api/v1/mining_nodes/session_id",
-          //         method: "post",
-          //         json: true,
-          //         headers: {},
-          //         body: {
-          //           "peer_nodes_list": [machine_id], 
-          //           "additional": { },
-          //           "nonce": nonce1,
-          //           "sign": sign1,
-          //           "wallet": walletinfo.wallet,
-          //           "rent_order": String(OrderId)
-          //         }
-          //       })
-          //     } catch (err) {
-          //       newsession = {
-          //         message: err.message
-          //       }
-          //     }
-          //     if (newsession.errcode != undefined || newsession.errcode != null) {
-          //       newsession = newsession
-          //     } else {
-          //       if (newsession.netcongtu || newsession.mainnet) {
-          //         if (machine_id.indexOf('CTC') != -1) {
-          //           newsession = newsession.netcongtu
-          //         } else {
-          //           newsession = newsession.mainnet
-          //         }
-          //       } else {
-          //         newsession = newsession
-          //       }
-          //     }
-          //     if (newsession&&newsession.errcode == 0) {
-          //       if (conn == null) {
-          //         conn = await MongoClient.connect(url, { useUnifiedTopology: true })
-          //       }
-          //       const virtualInfo3 = await conn.db("identifier").collection("virOrderInfo")
-          //       let { nonce: nonce1, signature: sign1 } = await CreateSignature1(walletinfo.seed, newsession.message.session_id)
-          //       await virtualInfo3.updateOne({_id: virOrderId}, {$set: {
-          //         session_id: nonce1,
-          //         session_id_sign: sign1
-          //       }})
-          //       console.log('rentagain-rentMachine-ExtrinsicSuccess-session-true');
-          //       response.json({
-          //         success: true,
-          //         code: 10001,
-          //         msg: '创建待确认租用订单成功,创建session成功',
-          //         content: virOrderId
-          //       })
-          //       if (conn != null){
-          //         conn.close()
-          //         conn = null
-          //       }
-          //     } else {
-          //       console.log('rentagain-rentMachine-ExtrinsicSuccess-session-false');
-          //       response.json({
-          //         success: true,
-          //         code: 10001,
-          //         msg: '创建待确认租用订单成功,创建session失败',
-          //         content: virOrderId
-          //       })
-          //     }
-          //     if (conn != null){
-          //       conn.close()
-          //       conn = null
-          //     }
-          //   }
-          // });
         }
       }).catch((err) => {
-        console.log('rentagain-rentMachine-ExtrinsicSuccess-session-false');
+        console.log(`rentagain-rentMachine-ExtrinsicSuccess-session-false: OrderId: ${virOrderId}`);
         return response.json({
           code: -8,
           msg:err.message,
@@ -2060,6 +1621,7 @@ signleRentVir.post('/restartSignleVir', urlEcode, async (request, response ,next
   try {
     const { virOrderId, task_id, machine_id, account } = request.body
     if(virOrderId&&machine_id&&task_id&&account) {
+      console.log(`重启虚拟机-restartSignleVir-start: orderId-' ${virOrderId}`);
       if (conn == null) {
         conn = await MongoClient.connect(url, { useUnifiedTopology: true })
       }
@@ -2135,6 +1697,7 @@ signleRentVir.post('/restartSignleVir', urlEcode, async (request, response ,next
         }
       }
       let VirInfo = {}
+      console.log(`重启虚拟机-tasks/restart/: orderId-' ${virOrderId}`);
       try {
         VirInfo = await httpRequest({
           url: baseUrl + "/api/v1/tasks/restart/"+ task_id,
@@ -2166,6 +1729,7 @@ signleRentVir.post('/restartSignleVir', urlEcode, async (request, response ,next
           VirInfo = VirInfo
         }
       }
+      console.log(`重启虚拟机-tasks/restart/接口调用结束: orderId-' ${virOrderId}`);
       if (VirInfo && VirInfo.errcode == 0) {
         response.json({
           code: 10001,
@@ -2208,6 +1772,7 @@ signleRentVir.post('/stopSignleVir', urlEcode, async (request, response ,next) =
   try {
     const { virOrderId, task_id, machine_id, account } = request.body
     if(virOrderId&&machine_id&&task_id&&account) {
+      console.log(`停止虚拟机 stopSignleVir-start: orderId-' ${virOrderId}`);
       if (conn == null) {
         conn = await MongoClient.connect(url, { useUnifiedTopology: true })
       }
@@ -2283,6 +1848,7 @@ signleRentVir.post('/stopSignleVir', urlEcode, async (request, response ,next) =
         }
       }
       let VirInfo = {}
+      console.log(`停止虚拟机-/tasks/poweroff/: orderId-' ${virOrderId}`);
       try {
         VirInfo = await httpRequest({
           url: baseUrl + "/api/v1/tasks/poweroff/"+ task_id,
@@ -2314,6 +1880,7 @@ signleRentVir.post('/stopSignleVir', urlEcode, async (request, response ,next) =
           VirInfo = VirInfo
         }
       }
+      console.log(`停止虚拟机-/tasks/poweroff/接口调用结束: orderId-' ${virOrderId}`);
       if (VirInfo && VirInfo.errcode == 0) {
         response.json({
           code: 10001,
@@ -2356,6 +1923,7 @@ signleRentVir.post('/startSignleVir', urlEcode, async (request, response ,next) 
   try {
     const { virOrderId, task_id, machine_id, account } = request.body
     if(virOrderId&&machine_id&&task_id&&account) {
+      console.log(`启动虚拟机-startSignleVir-start: orderId-' ${virOrderId}`);
       if (conn == null) {
         conn = await MongoClient.connect(url, { useUnifiedTopology: true })
       }
@@ -2431,6 +1999,7 @@ signleRentVir.post('/startSignleVir', urlEcode, async (request, response ,next) 
         }
       }
       let VirInfo1 = {}
+      console.log(`启动虚拟机-查询虚拟机状态-/tasks/task_id-start: orderId-' ${virOrderId}`);
       try {
         VirInfo1 = await httpRequest({
           url: baseUrl + "/api/v1/tasks/"+ task_id,
@@ -2462,12 +2031,14 @@ signleRentVir.post('/startSignleVir', urlEcode, async (request, response ,next) 
           VirInfo1 = VirInfo1
         }
       }
+      console.log(`启动虚拟机-查询虚拟机状态结束-/tasks/task_id-end: orderId-' ${virOrderId}`);
       if (VirInfo1 && VirInfo1.errcode == 0) {
         if (conn == null) {
           conn = await MongoClient.connect(url, { useUnifiedTopology: true })
         }
         const orderInfo2 = await conn.db("identifier").collection("virOrderInfo")
         if (VirInfo1.message.status == 'running') {
+          console.log(`启动虚拟机-查询虚拟机状态为-/tasks/task_id-running: orderId-' ${virOrderId}`);
           await orderInfo2.updateOne({_id: virOrderId}, {$set: { status: 'running' }})
           response.json({
             code: 10001,
@@ -2476,6 +2047,7 @@ signleRentVir.post('/startSignleVir', urlEcode, async (request, response ,next) 
             content: virOrderId
           })
         } else if (VirInfo1.message.status == 'starting') {
+          console.log(`启动虚拟机-查询虚拟机状态为-/tasks/task_id-starting: orderId-' ${virOrderId}`);
           await orderInfo2.updateOne({_id: virOrderId}, {$set: { status: 'starting' }})
           response.json({
             code: 10001,
@@ -2491,6 +2063,7 @@ signleRentVir.post('/startSignleVir', urlEcode, async (request, response ,next) 
             "sign": sign4,
             "wallet": walletinfo.wallet,
           }
+          console.log(`启动虚拟机-调用启用接口 tasks/start/task_id: orderId-' ${virOrderId}`);
           try {
             VirInfo = await httpRequest({
               url: baseUrl + "/api/v1/tasks/start/"+ task_id,
@@ -2522,6 +2095,7 @@ signleRentVir.post('/startSignleVir', urlEcode, async (request, response ,next) 
               VirInfo = VirInfo
             }
           }
+          console.log(`启动虚拟机-调用启用接口接口 tasks/start/task_id-end: orderId-' ${virOrderId}`);
           if (VirInfo && VirInfo.errcode == 0) {
             response.json({
               code: 10001,
